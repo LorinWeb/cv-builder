@@ -1,0 +1,7 @@
+{
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "tailwindCSS.experimental.configFile": "src/styles/app.css",
+  "tailwindCSS.lint.suggestCanonicalClasses": "error"
+}

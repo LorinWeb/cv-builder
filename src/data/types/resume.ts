@@ -1,0 +1,129 @@
+export interface PrintConfig {
+  printBreakBefore?: 'page';
+  avoidPageBreakInside?: boolean;
+}
+
+export interface TextEntry extends PrintConfig {
+  text: string;
+}
+
+export type TextValue = string | TextEntry;
+
+export interface ResumeLocation {
+  address?: string;
+  city?: string;
+  country?: string;
+  countryCode?: string;
+  postalCode?: string;
+  region?: string;
+}
+
+export interface ResumeProfile {
+  network?: string;
+  username?: string;
+  url: string;
+}
+
+export interface ResumeBasics {
+  email: string;
+  impact?: TextValue[];
+  label: string;
+  location?: ResumeLocation;
+  name: string;
+  phone: string;
+  profiles?: ResumeProfile[];
+  summary: string;
+}
+
+export interface ResumeWorkEntry extends PrintConfig {
+  company: string;
+  endDate?: string;
+  highlights?: TextValue[];
+  isContract?: boolean;
+  position: string;
+  startDate: string;
+  summary: string;
+  website?: string;
+}
+
+export interface ResumeWorkGroup extends PrintConfig {
+  company?: string;
+  progression: ResumeWorkEntry[];
+  website?: string;
+}
+
+export type ResumeWorkItem = ResumeWorkEntry | ResumeWorkGroup;
+
+export interface SkillCategory extends PrintConfig {
+  keywords: TextValue[];
+  name: string;
+}
+
+export interface EducationItem extends PrintConfig {
+  area: string;
+  courses?: TextValue[];
+  endDate?: string;
+  gpa?: string;
+  institution: string;
+  startDate: string;
+  studyType: string;
+}
+
+export interface EducationNote extends PrintConfig {
+  summary: string;
+  title: string;
+}
+
+export interface ResumeVolunteerItem extends PrintConfig {
+  endDate?: string;
+  highlights?: TextValue[];
+  organization: string;
+  position?: string;
+  startDate?: string;
+  summary?: string;
+  url?: string;
+}
+
+export interface ResumeAward extends PrintConfig {
+  awarder?: string;
+  date?: string;
+  summary?: string;
+  title: string;
+}
+
+export interface ResumePublication extends PrintConfig {
+  name: string;
+  publisher?: string;
+  releaseDate?: string;
+  summary?: string;
+  url?: string;
+}
+
+export interface ResumeInterest extends PrintConfig {
+  keywords?: string[];
+  name: string;
+}
+
+export interface ResumeReference extends PrintConfig {
+  name: string;
+  reference?: string;
+}
+
+export interface ResumeLanguage extends PrintConfig {
+  level?: string;
+  name: string;
+}
+
+export interface ResumeData {
+  awards?: ResumeAward[];
+  basics: ResumeBasics;
+  education?: EducationItem[];
+  educationNote?: EducationNote;
+  interests?: ResumeInterest[];
+  languages?: ResumeLanguage[];
+  publications?: ResumePublication[];
+  references?: ResumeReference[];
+  skills?: SkillCategory[];
+  volunteer?: ResumeVolunteerItem[];
+  work?: ResumeWorkItem[];
+}

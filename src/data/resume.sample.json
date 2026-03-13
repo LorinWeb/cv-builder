@@ -1,0 +1,217 @@
+{
+  "basics": {
+    "name": "John Doe",
+    "label": "Staff Engineer | Platform Lead | Resume Template Example",
+    "email": "john.doe@example.com",
+    "phone": "+1 555-0100",
+    "summary": "John Doe is a fictional engineering leader used to demonstrate this resume template. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "impact": [
+      {
+        "text": "Led a fictional platform modernisation programme across multiple teams and services"
+      },
+      {
+        "text": "Improved developer experience with better tooling, documentation, and shared standards"
+      },
+      {
+        "text": "Partnered with product and design peers to simplify complex workflows for customers"
+      },
+      {
+        "text": "Scaled engineering delivery practices with stronger planning and clearer ownership"
+      },
+      {
+        "text": "Introduced reusable systems that reduced duplication and improved maintainability"
+      },
+      {
+        "text": "Mentored engineers and tech leads through ambiguous delivery and architecture work"
+      }
+    ],
+    "location": {
+      "address": "100 Example Street",
+      "postalCode": "12345",
+      "city": "Example City",
+      "countryCode": "US",
+      "region": "Example State"
+    },
+    "profiles": [
+      {
+        "network": "LinkedIn",
+        "username": "/john-doe",
+        "url": "https://example.com/john-doe"
+      }
+    ]
+  },
+  "work": [
+    {
+      "company": "Acme Systems",
+      "website": "https://example.com/acme-systems",
+      "position": "Head of Engineering",
+      "startDate": "2023-04-01",
+      "endDate": "",
+      "summary": "Owned engineering strategy, delivery, and platform direction for a fictional B2B product suite used in this sample resume.",
+      "highlights": [
+        {
+          "text": "Aligned delivery priorities across platform, product, and reliability workstreams"
+        },
+        {
+          "text": "Established a clearer technical roadmap with explicit trade-offs and milestones"
+        },
+        {
+          "text": "Introduced shared architectural patterns that reduced repeated implementation work"
+        },
+        {
+          "text": "Improved cross-team planning rituals and incident response coordination"
+        }
+      ]
+    },
+    {
+      "company": "Northwind Analytics",
+      "website": "https://example.com/northwind-analytics",
+      "position": "Engineering Manager",
+      "startDate": "2020-01-06",
+      "endDate": "2023-03-31",
+      "summary": "Led a multi-disciplinary engineering team building internal tooling and customer-facing product features for a fictional analytics business.",
+      "highlights": [
+        {
+          "text": "Improved delivery predictability through clearer scope control and release planning"
+        },
+        {
+          "text": "Reduced operational load by prioritising instrumentation and reliability improvements"
+        },
+        {
+          "text": "Worked closely with design and product to simplify high-friction user journeys"
+        },
+        {
+          "text": "Supported hiring, onboarding, and growth planning for a growing engineering team"
+        }
+      ]
+    },
+    {
+      "company": "Placeholder Labs",
+      "website": "https://example.com/placeholder-labs",
+      "progression": [
+        {
+          "company": "Placeholder Labs",
+          "position": "Lead Product Engineer",
+          "startDate": "2018-05-01",
+          "endDate": "2019-12-20",
+          "summary": "Led delivery of a fictional web application refresh, balancing new feature work with a gradual platform clean-up.",
+          "highlights": [
+            {
+              "text": "Coordinated feature delivery across front-end and service-layer changes"
+            },
+            {
+              "text": "Introduced a reusable component library for shared product workflows"
+            },
+            {
+              "text": "Reduced regressions through a more disciplined QA and release process"
+            }
+          ]
+        },
+        {
+          "isContract": true,
+          "company": "Placeholder Labs",
+          "position": "Senior Software Engineer",
+          "startDate": "2016-06-01",
+          "endDate": "2018-04-30",
+          "summary": "Delivered customer-facing features and internal tooling for a fictional SaaS product in a fast-moving team.",
+          "highlights": [
+            {
+              "text": "Implemented new product capabilities across the web application and APIs"
+            },
+            {
+              "text": "Improved performance in key user journeys through iterative optimisation"
+            },
+            {
+              "text": "Helped document conventions and patterns for a growing engineering group"
+            }
+          ]
+        }
+      ],
+      "avoidPageBreakInside": true
+    },
+    {
+      "company": "Various Clients",
+      "position": "Software Engineer",
+      "startDate": "2011-01-03",
+      "endDate": "2016-05-27",
+      "summary": "Built foundational experience across fictional client projects in e-commerce, SaaS, and internal tools.",
+      "highlights": [
+        {
+          "text": "Delivered product features for several client teams while adapting to different codebases"
+        }
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "name": "Leadership and Delivery",
+      "keywords": [
+        {
+          "text": "Roadmapping, planning, and cross-functional alignment"
+        },
+        {
+          "text": "Team mentoring, feedback, and engineering process improvement"
+        },
+        {
+          "text": "Pragmatic decision-making under evolving product constraints"
+        }
+      ]
+    },
+    {
+      "avoidPageBreakInside": true,
+      "name": "Architecture and Platform",
+      "keywords": [
+        {
+          "text": "Front-end architecture, TypeScript, and product platform design"
+        },
+        {
+          "text": "Incremental modernisation and maintainability improvements"
+        },
+        {
+          "text": "Developer tooling, testing strategy, and engineering standards"
+        }
+      ]
+    },
+    {
+      "avoidPageBreakInside": true,
+      "name": "Execution and Collaboration",
+      "keywords": [
+        {
+          "text": "Discovery, prioritisation, and stakeholder communication"
+        },
+        {
+          "text": "Balancing product delivery with reliability and technical quality"
+        },
+        {
+          "text": "Clear written communication and repeatable delivery practices"
+        }
+      ]
+    }
+  ],
+  "education": [
+    {
+      "printBreakBefore": "page",
+      "institution": "Example University",
+      "area": "Computer Science",
+      "studyType": "Bachelor's Degree",
+      "startDate": "2007-09-01",
+      "endDate": "2010-06-30",
+      "gpa": "",
+      "courses": [
+        {
+          "text": "Algorithms, data structures, and software engineering fundamentals"
+        }
+      ]
+    }
+  ],
+  "educationNote": {
+    "title": "Template Note",
+    "summary": "This resume uses fictional data so the project can be shared publicly as a reusable template without exposing personal information."
+  },
+  "languages": [
+    {
+      "name": "English",
+      "level": "Fluent"
+    }
+  ]
+}
