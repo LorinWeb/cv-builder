@@ -1,5 +1,3 @@
-import { useLayoutEffect, useState } from 'react';
-
 import Page from './Layout/Page';
 import type { StickyConfig } from './Layout/sticky';
 import AchievementItem from './ItemRenderers/AchievementItem';
@@ -11,58 +9,17 @@ import WorkExperienceItem from './ItemRenderers/WorkExperienceItem';
 import ProfileSection from './ProfileSection';
 import ResumeSection from './ResumeSection';
 import { getPrintClassNames, joinClassNames } from '../helpers/print';
+import useElementVisibility from '../hooks/useElementVisibility';
+import useObservedElementHeight from '../hooks/useObservedElementHeight';
 import type { ResumeData, ResumeWorkItem } from '../data/types/resume';
 
 interface AppProps {
   data: ResumeData;
 }
 
-function useObservedElementHeight<TElement extends HTMLElement>() {
-  const [element, setElement] = useState<TElement | null>(null);
-  const [height, setHeight] = useState(0);
-
-  useLayoutEffect(() => {
-    if (!element) {
-      setHeight(0);
-      return;
-    }
-
-    const updateHeight = () => {
-      const nextHeight = element.getBoundingClientRect().height;
-
-      setHeight((currentHeight) =>
-        currentHeight === nextHeight ? currentHeight : nextHeight
-      );
-    };
-
-    updateHeight();
-
-    const resizeObserver = new ResizeObserver(() => {
-      updateHeight();
-    });
-
-    resizeObserver.observe(element);
-
-    const handleResize = () => {
-      updateHeight();
-    };
-
-    window.addEventListener('resize', handleResize, { passive: true });
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [element]);
-
-  return {
-    height,
-    ref: setElement as (element: TElement | null) => void,
-  };
-}
-
 function App({ data }: AppProps) {
   const profileData = data.basics;
+  const profilePhoto = profileData.photo;
   const workData = data.work || [];
   const skillsData = data.skills || [];
   const educationData = data.education || [];
@@ -70,8 +27,11 @@ function App({ data }: AppProps) {
   const impactData = profileData.impact || [];
   const { height: headerHeight, ref: headerRef } =
     useObservedElementHeight<HTMLElement>();
+  const { isVisible: isStandalonePhotoVisible, ref: standalonePhotoRef } =
+    useElementVisibility<HTMLImageElement>();
   const hasSideColumn =
     skillsData.length > 0 || educationData.length > 0 || !!educationNoteData;
+  const compactPhotoVisible = !!profilePhoto && !isStandalonePhotoVisible;
   const titleSticky: StickyConfig = {
     offset: headerHeight,
     position: 'top',
@@ -81,9 +41,33 @@ function App({ data }: AppProps) {
     <>
       <AmbientDesignLayer />
 
+      {profilePhoto ? (
+        <div
+          data-testid="profile-photo-standalone-frame"
+          className="relative z-10 mx-auto mt-12.5 mb-0 flex w-[210mm] max-w-[calc(100%-32px)] justify-center px-[10mm] pb-10 md:pb-0 print:hidden"
+        >
+          <img
+            ref={standalonePhotoRef}
+            data-testid="profile-photo-standalone"
+            data-visible={String(isStandalonePhotoVisible)}
+            src={profilePhoto.src}
+            alt={profilePhoto.alt ?? `${profileData.name} profile photo`}
+            className={joinClassNames(
+              'block h-44 w-44 rounded-full border border-[rgba(137,186,182,0.45)] object-cover object-center shadow-[0_16px_32px_-24px_rgba(34,34,34,0.5)] transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
+              isStandalonePhotoVisible
+                ? 'scale-100 opacity-100 blur-0'
+                : 'scale-95 opacity-0 blur-[2px]'
+            )}
+          />
+        </div>
+      ) : null}
+
       <Page data-testid="app">
         <Page.Header ref={headerRef} sticky>
-          <ProfileSection profileData={profileData} />
+          <ProfileSection
+            profileData={profileData}
+            compactPhotoVisible={compactPhotoVisible}
+          />
         </Page.Header>
 
         <Page.Body>

@@ -1,6 +1,6 @@
 import {
+  useCallback,
   useEffect,
-  useEffectEvent,
   useLayoutEffect,
   useRef,
   type CSSProperties,
@@ -128,27 +128,32 @@ export function useStickyState<TElement extends HTMLElement>(sticky?: StickyProp
   const stickyPosition = normalizedSticky?.position;
   const hasSticky = !!normalizedSticky;
 
-  const updateStickyState = useEffectEvent(() => {
+  const updateStickyState = useCallback(() => {
     const element = elementRef.current;
 
     if (!element) {
       return;
     }
 
-    if (!normalizedSticky) {
+    if (!hasSticky) {
       element.removeAttribute('data-stuck');
       return;
     }
 
     element.setAttribute(
       'data-stuck',
-      String(isStickyElementStuck(element, normalizedSticky))
+      String(
+        isStickyElementStuck(element, {
+          offset: stickyOffset ?? '0px',
+          position: stickyPosition ?? 'top',
+        })
+      )
     );
-  });
+  }, [hasSticky, stickyOffset, stickyPosition]);
 
   useLayoutEffect(() => {
     updateStickyState();
-  }, [hasSticky, stickyOffset, stickyPosition, updateStickyState]);
+  }, [updateStickyState]);
 
   useEffect(() => {
     const element = elementRef.current;
@@ -191,7 +196,7 @@ export function useStickyState<TElement extends HTMLElement>(sticky?: StickyProp
       window.removeEventListener('scroll', handleChange);
       element.removeAttribute('data-stuck');
     };
-  }, [hasSticky, stickyOffset, stickyPosition, updateStickyState]);
+  }, [hasSticky, updateStickyState]);
 
   return {
     normalizedSticky,

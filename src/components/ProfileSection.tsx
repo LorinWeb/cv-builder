@@ -13,6 +13,7 @@ const COUNTRY_LABELS = {
 } as const;
 
 interface ProfileSectionProps extends ComponentPropsWithoutRef<'div'> {
+  compactPhotoVisible?: boolean;
   profileData: ResumeBasics;
 }
 
@@ -40,40 +41,79 @@ function formatPhoneHref(phoneNumber = '') {
   return phoneNumber.replace(/[^\d+]/g, '');
 }
 
-function ProfileSection({ profileData, className, ...props }: ProfileSectionProps) {
+function ProfileSection({
+  profileData,
+  compactPhotoVisible = false,
+  className,
+  ...props
+}: ProfileSectionProps) {
   const profiles = profileData.profiles || [];
   const location = formatLocation(profileData.location);
   const photo = profileData.photo;
+  const showCompactPhoto = compactPhotoVisible && !!photo;
 
   return (
     <div
       data-testid="profile-section"
+      data-collapse-progress={showCompactPhoto ? '1.000' : '0.000'}
       className={joinClassNames(
-        'mb-0 flex flex-col items-center gap-4.5 border-b border-b-(--color-header-border) pb-4.5',
+        'mb-0 flex flex-col items-center gap-4.5 border-b border-b-(--color-header-border) bg-white pb-4.5',
         className
       )}
       {...props}
     >
-      {photo ? (
-        <img
-          data-testid="profile-photo"
-          src={photo.src}
-          alt={photo.alt ?? `${profileData.name} profile photo`}
-          className="block h-39 w-29 rounded-[18px] border border-[rgba(137,186,182,0.45)] object-cover object-center shadow-[0_16px_32px_-24px_rgba(34,34,34,0.5)]"
-        />
-      ) : null}
+      <div
+        data-testid="profile-top-row"
+        className="flex w-full items-center"
+      >
+        {photo ? (
+          <div
+            aria-hidden="true"
+            data-testid="profile-photo-compact"
+            data-visible={String(showCompactPhoto)}
+            className={joinClassNames(
+              'shrink-0 overflow-hidden transition-[height,width,margin-right,opacity,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none print:hidden',
+              showCompactPhoto
+                ? 'mr-4 mt-4 h-22.25 w-16.5 translate-x-0 opacity-100'
+                : 'mr-0 h-0 w-0 -translate-x-2 opacity-0'
+            )}
+          >
+            <img
+              src={photo.src}
+              alt=""
+              className={joinClassNames(
+                'block h-22.25 w-16.5 rounded-[14px] border border-[rgba(137,186,182,0.45)] object-cover object-center shadow-[0_12px_24px_-20px_rgba(34,34,34,0.5)] transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
+                showCompactPhoto ? 'scale-100' : 'scale-90'
+              )}
+            />
+          </div>
+        ) : null}
+
+        <div
+          data-testid="profile-intro"
+          className="min-w-0 flex-1 text-left"
+        >
+          <h1
+            data-testid="profile-title"
+            className="text-(--color-primary)"
+            style={{ lineHeight: 1.2, marginBottom: '6px' }}
+          >
+            {profileData.name}
+          </h1>
+          <p
+            data-testid="profile-subtitle"
+            className="m-0 text-[1.1rem] leading-normal text-(--color-secondary)"
+          >
+            {profileData.label}
+          </p>
+        </div>
+      </div>
 
       <div className="min-w-0 w-full">
-        <h1
-          className="text-(--color-primary)"
-          style={{ lineHeight: 1.2, marginBottom: '6px' }}
+        <ul
+          data-testid="profile-contacts"
+          className="m-0 flex list-none flex-wrap justify-between gap-x-4.5 gap-y-2 pl-0 text-[0.8em]"
         >
-          {profileData.name}
-        </h1>
-        <p className="m-0 text-[1.1rem] leading-normal text-(--color-secondary)">
-          {profileData.label}
-        </p>
-        <ul className="m-0 mt-3.5 flex list-none flex-wrap justify-between gap-x-4.5 gap-y-2 pl-0 text-[0.8em]">
           <li className="list-none leading-[1.4] text-(--color-secondary)">
             <a href={`mailto:${profileData.email}`} className="text-inherit no-underline">
               {profileData.email}
