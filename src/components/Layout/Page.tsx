@@ -1,6 +1,7 @@
 import {
   Children,
   createContext,
+  forwardRef,
   isValidElement,
   useContext,
   type ComponentPropsWithoutRef,
@@ -9,9 +10,12 @@ import {
 } from 'react';
 
 import { joinClassNames } from '../../helpers/print';
+import { assignRef, useStickyState, type StickyProp } from './sticky';
 
 type PageRootProps = ComponentPropsWithoutRef<'div'>;
-type PageHeaderProps = ComponentPropsWithoutRef<'header'>;
+type PageHeaderProps = ComponentPropsWithoutRef<'header'> & {
+  sticky?: StickyProp;
+};
 type PageBodyProps = ComponentPropsWithoutRef<'div'>;
 type PageMainContentProps = ComponentPropsWithoutRef<'main'>;
 type PageFooterProps = ComponentPropsWithoutRef<'footer'>;
@@ -110,9 +114,26 @@ function PageRoot({ className, ...props }: PageRootProps) {
   );
 }
 
-function PageHeader({ className, ...props }: PageHeaderProps) {
-  return <header data-testid="page-header" className={joinClassNames("sticky bg-white top-0",className)} {...props} />;
-}
+const PageHeader = forwardRef<HTMLElement, PageHeaderProps>(function PageHeader(
+  { className, sticky, style, ...props },
+  ref
+) {
+  const { normalizedSticky, ref: stickyRef, stickyStyle } = useStickyState(sticky);
+
+  return (
+    <header
+      ref={(element) => {
+        stickyRef(element);
+        assignRef(ref, element);
+      }}
+      data-testid="page-header"
+      data-sticky-position={normalizedSticky?.position}
+      className={joinClassNames(normalizedSticky && 'bg-white z-30', className)}
+      style={stickyStyle ? { ...style, ...stickyStyle } : style}
+      {...props}
+    />
+  );
+});
 
 function PageBody({ children, className, ...props }: PageBodyProps) {
   const layout = getPageBodyLayout(children);

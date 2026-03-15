@@ -1,4 +1,7 @@
+import { useLayoutEffect, useState } from 'react';
+
 import Page from './Layout/Page';
+import type { StickyConfig } from './Layout/sticky';
 import AchievementItem from './ItemRenderers/AchievementItem';
 import { AmbientDesignLayer } from './AmbientDesignLayer';
 import EducationEntryItem from './ItemRenderers/EducationEntryItem';
@@ -14,6 +17,50 @@ interface AppProps {
   data: ResumeData;
 }
 
+function useObservedElementHeight<TElement extends HTMLElement>() {
+  const [element, setElement] = useState<TElement | null>(null);
+  const [height, setHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    if (!element) {
+      setHeight(0);
+      return;
+    }
+
+    const updateHeight = () => {
+      const nextHeight = element.getBoundingClientRect().height;
+
+      setHeight((currentHeight) =>
+        currentHeight === nextHeight ? currentHeight : nextHeight
+      );
+    };
+
+    updateHeight();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateHeight();
+    });
+
+    resizeObserver.observe(element);
+
+    const handleResize = () => {
+      updateHeight();
+    };
+
+    window.addEventListener('resize', handleResize, { passive: true });
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [element]);
+
+  return {
+    height,
+    ref: setElement as (element: TElement | null) => void,
+  };
+}
+
 function App({ data }: AppProps) {
   const profileData = data.basics;
   const workData = data.work || [];
@@ -21,26 +68,36 @@ function App({ data }: AppProps) {
   const educationData = data.education || [];
   const educationNoteData = data.educationNote;
   const impactData = profileData.impact || [];
+  const { height: headerHeight, ref: headerRef } =
+    useObservedElementHeight<HTMLElement>();
   const hasSideColumn =
     skillsData.length > 0 || educationData.length > 0 || !!educationNoteData;
+  const titleSticky: StickyConfig = {
+    offset: headerHeight,
+    position: 'top',
+  };
 
   return (
     <>
       <AmbientDesignLayer />
 
       <Page data-testid="app">
-        <Page.Header>
+        <Page.Header ref={headerRef} sticky>
           <ProfileSection profileData={profileData} />
         </Page.Header>
 
         <Page.Body>
           <Page.MainContent>
-            <ResumeSection title="Professional Summary">
+            <ResumeSection title="Professional Summary" titleSticky={titleSticky}>
               {profileData.summary}
             </ResumeSection>
 
             {impactData.length > 0 && (
-              <ResumeSection items={impactData} title="Selected Achievements">
+              <ResumeSection
+                items={impactData}
+                title="Selected Achievements"
+                titleSticky={titleSticky}
+              >
                 {({ getItemClassName, items }) => (
                   <ul className="mt-2 list-square pl-5 text-[1em] font-light leading-[1.35]">
                     {items.map((item, index) => (
@@ -59,6 +116,7 @@ function App({ data }: AppProps) {
               <ResumeSection<ResumeWorkItem>
                 items={workData}
                 title="Professional Experience"
+                titleSticky={titleSticky}
               >
                 {({ getItemClassName, items }) => (
                   <>
@@ -82,6 +140,7 @@ function App({ data }: AppProps) {
                   className="text-left"
                   items={skillsData}
                   title="Skills"
+                  titleSticky={titleSticky}
                 >
                   {({ getItemClassName, items }) => (
                     <>
@@ -98,7 +157,11 @@ function App({ data }: AppProps) {
               )}
 
               {(educationData.length > 0 || educationNoteData) && (
-                <ResumeSection items={educationData} title="Education">
+                <ResumeSection
+                  items={educationData}
+                  title="Education"
+                  titleSticky={titleSticky}
+                >
                   {({ getItemClassName, items }) => (
                     <>
                       {items.map((item, index) => (
