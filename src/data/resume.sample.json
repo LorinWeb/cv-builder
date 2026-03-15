@@ -2,6 +2,10 @@
   "basics": {
     "name": "John Doe",
     "label": "Staff Engineer | Platform Lead | Resume Template Example",
+    "photo": {
+      "src": "/static/profile-placeholder.jpg",
+      "alt": "Placeholder portrait showing the recommended profile photo crop for this resume template"
+    },
     "email": "john.doe@example.com",
     "phone": "+1 555-0100",
     "summary": "John Doe is a fictional engineering leader used to demonstrate this resume template. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",

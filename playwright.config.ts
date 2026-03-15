@@ -32,7 +32,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run build && npm run preview:visual',
+    command:
+      'env RESUME_DATA_PATH=src/data/resume.sample.json npm run build && npm run preview:visual',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,

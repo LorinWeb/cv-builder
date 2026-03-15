@@ -24,12 +24,18 @@ export interface ResumeProfile {
   url: string;
 }
 
+export interface ResumePhoto {
+  alt?: string;
+  src: string;
+}
+
 export interface ResumeBasics {
   email: string;
   impact?: TextValue[];
   label: string;
   location?: ResumeLocation;
   name: string;
+  photo?: ResumePhoto;
   phone: string;
   profiles?: ResumeProfile[];
   summary: string;

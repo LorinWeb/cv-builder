@@ -82,6 +82,32 @@ test('prefers .env.local over .env when both define RESUME_DATA_PATH', async () 
   });
 });
 
+test('loads a configured local public profile photo path when the file exists', async () => {
+  withTempEnvDir((envDir) => {
+    writeFile(path.join(envDir, '.env'), 'RESUME_DATA_PATH=src/data/resume.sample.json\n');
+    writeFile(
+      path.join(envDir, 'src/data/resume.sample.json'),
+      JSON.stringify(
+        {
+          basics: {
+            ...MINIMAL_RESUME_DATA.basics,
+            photo: {
+              src: '/static/profile.jpg',
+            },
+          },
+        },
+        null,
+        2
+      )
+    );
+    writeFile(path.join(envDir, 'public/static/profile.jpg'), 'placeholder image file');
+
+    const resumeData = loadResumeData({ envDir, mode: 'test', useProcessEnv: false });
+
+    expect(resumeData.basics.photo?.src).toBe('/static/profile.jpg');
+  });
+});
+
 test('throws a clear error when the configured JSON file is missing', async () => {
   withTempEnvDir((envDir) => {
     writeFile(path.join(envDir, '.env'), 'RESUME_DATA_PATH=src/data/missing.json\n');
@@ -89,6 +115,31 @@ test('throws a clear error when the configured JSON file is missing', async () =
     expect(() =>
       loadResumeData({ envDir, mode: 'test', useProcessEnv: false })
     ).toThrow(/was not found/);
+  });
+});
+
+test('throws a clear error when a configured local public profile photo file is missing', async () => {
+  withTempEnvDir((envDir) => {
+    writeFile(path.join(envDir, '.env'), 'RESUME_DATA_PATH=src/data/resume.sample.json\n');
+    writeFile(
+      path.join(envDir, 'src/data/resume.sample.json'),
+      JSON.stringify(
+        {
+          basics: {
+            ...MINIMAL_RESUME_DATA.basics,
+            photo: {
+              src: '/static/private/profile.jpg',
+            },
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    expect(() =>
+      loadResumeData({ envDir, mode: 'test', useProcessEnv: false })
+    ).toThrow(/Resume photo file was not found/);
   });
 });
 

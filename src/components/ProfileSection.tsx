@@ -43,17 +43,27 @@ function formatPhoneHref(phoneNumber = '') {
 function ProfileSection({ profileData, className, ...props }: ProfileSectionProps) {
   const profiles = profileData.profiles || [];
   const location = formatLocation(profileData.location);
+  const photo = profileData.photo;
 
   return (
     <div
       data-testid="profile-section"
       className={joinClassNames(
-        'mb-0 flex items-start justify-between gap-6 border-b border-b-(--color-header-border) pb-4.5 max-[640px]:flex-col max-[640px]:items-center',
+        'mb-0 flex flex-col items-center gap-4.5 border-b border-b-(--color-header-border) pb-4.5',
         className
       )}
       {...props}
     >
-      <div className="min-w-0 flex-auto max-[640px]:w-full">
+      {photo ? (
+        <img
+          data-testid="profile-photo"
+          src={photo.src}
+          alt={photo.alt ?? `${profileData.name} profile photo`}
+          className="block h-39 w-29 rounded-[18px] border border-[rgba(137,186,182,0.45)] object-cover object-center shadow-[0_16px_32px_-24px_rgba(34,34,34,0.5)]"
+        />
+      ) : null}
+
+      <div className="min-w-0 w-full">
         <h1
           className="text-(--color-primary)"
           style={{ lineHeight: 1.2, marginBottom: '6px' }}

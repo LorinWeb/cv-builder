@@ -28,12 +28,18 @@ const resumeProfileSchema = z.object({
   username: z.string().optional(),
 });
 
+const resumePhotoSchema = z.object({
+  alt: z.string().optional(),
+  src: z.string(),
+});
+
 const resumeBasicsSchema = z.object({
   email: z.string(),
   impact: z.array(textValueSchema).optional(),
   label: z.string(),
   location: resumeLocationSchema.optional(),
   name: z.string(),
+  photo: resumePhotoSchema.optional(),
   phone: z.string(),
   profiles: z.array(resumeProfileSchema).optional(),
   summary: z.string(),

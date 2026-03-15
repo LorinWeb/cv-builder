@@ -14,6 +14,7 @@ interface ResumeDataLoadOptions {
 }
 
 const PROJECT_ROOT = fileURLToPath(new URL('../..', import.meta.url));
+const PUBLIC_ASSET_PREFIX = '/static/';
 
 function getEnvFileNames(mode: string) {
   return ['.env', '.env.local', `.env.${mode}`, `.env.${mode}.local`];
@@ -87,7 +88,34 @@ export function resolveResumeDataPath(options: ResumeDataLoadOptions = {}) {
   return path.resolve(resolvedEnvDir, configuredPath);
 }
 
+function isLocalPublicAssetPath(assetPath: string) {
+  return assetPath.startsWith(PUBLIC_ASSET_PREFIX);
+}
+
+function resolveLocalPublicAssetPath(assetPath: string, projectRoot: string) {
+  return path.resolve(projectRoot, 'public', assetPath.replace(/^\//, ''));
+}
+
+function validateResumePhotoAsset(data: ResumeData, projectRoot: string) {
+  const photoSrc = data.basics.photo?.src;
+
+  if (!photoSrc || !isLocalPublicAssetPath(photoSrc)) {
+    return;
+  }
+
+  const resolvedPhotoPath = resolveLocalPublicAssetPath(photoSrc, projectRoot);
+
+  if (existsSync(resolvedPhotoPath)) {
+    return;
+  }
+
+  throw new Error(
+    `Resume photo file was not found at ${resolvedPhotoPath}. Set basics.photo.src to a valid file under public/static or update your private local photo asset.`
+  );
+}
+
 export function loadResumeData(options: ResumeDataLoadOptions = {}): ResumeData {
+  const { resolvedEnvDir } = readConfiguredEnv(options);
   const resolvedPath = resolveResumeDataPath(options);
   let rawJson = '';
 
@@ -113,7 +141,11 @@ export function loadResumeData(options: ResumeDataLoadOptions = {}): ResumeData 
   }
 
   try {
-    return parseResumeData(parsedJson);
+    const resumeData = parseResumeData(parsedJson);
+
+    validateResumePhotoAsset(resumeData, resolvedEnvDir);
+
+    return resumeData;
   } catch (error) {
     throw new Error(
       `Resume data file at ${resolvedPath} failed validation. ${
