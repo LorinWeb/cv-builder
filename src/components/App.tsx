@@ -1,5 +1,6 @@
 import Page from './Layout/Page';
 import AchievementItem from './ItemRenderers/AchievementItem';
+import { AmbientDesignLayer } from './AmbientDesignLayer';
 import EducationEntryItem from './ItemRenderers/EducationEntryItem';
 import EducationNoteItem from './ItemRenderers/EducationNoteItem';
 import SkillCategoryItem from './ItemRenderers/SkillCategoryItem';
@@ -24,66 +25,46 @@ function App({ data }: AppProps) {
     skillsData.length > 0 || educationData.length > 0 || !!educationNoteData;
 
   return (
-    <Page data-testid="app">
-      <Page.Header>
-        <ProfileSection profileData={profileData} />
-      </Page.Header>
+    <>
+      <AmbientDesignLayer />
 
-      <Page.Body>
-        <Page.MainContent>
-          <ResumeSection title="Professional Summary">
-            {profileData.summary}
-          </ResumeSection>
+      <Page data-testid="app">
+        <Page.Header>
+          <ProfileSection profileData={profileData} />
+        </Page.Header>
 
-          {impactData.length > 0 && (
-            <ResumeSection items={impactData} title="Selected Achievements">
-              {({ getItemClassName, items }) => (
-                <ul className="mt-2 list-square pl-5 text-[1em] font-light leading-[1.35]">
-                  {items.map((item, index) => (
-                    <AchievementItem
-                      key={index}
-                      item={item}
-                      className={getItemClassName(item, index)}
-                    />
-                  ))}
-                </ul>
-              )}
+        <Page.Body>
+          <Page.MainContent>
+            <ResumeSection title="Professional Summary">
+              {profileData.summary}
             </ResumeSection>
-          )}
 
-          {workData.length > 0 && (
-            <ResumeSection<ResumeWorkItem>
-              items={workData}
-              title="Professional Experience"
-            >
-              {({ getItemClassName, items }) => (
-                <>
-                  {items.map((item, index) => (
-                    <WorkExperienceItem
-                      key={index}
-                      item={item}
-                      className={getItemClassName(item, index)}
-                    />
-                  ))}
-                </>
-              )}
-            </ResumeSection>
-          )}
-        </Page.MainContent>
+            {impactData.length > 0 && (
+              <ResumeSection items={impactData} title="Selected Achievements">
+                {({ getItemClassName, items }) => (
+                  <ul className="mt-2 list-square pl-5 text-[1em] font-light leading-[1.35]">
+                    {items.map((item, index) => (
+                      <AchievementItem
+                        key={index}
+                        item={item}
+                        className={getItemClassName(item, index)}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </ResumeSection>
+            )}
 
-        {hasSideColumn && (
-          <Page.Sidebar placement="right">
-            {skillsData.length > 0 && (
-              <ResumeSection
-                className="text-left"
-                items={skillsData}
-                title="Skills"
+            {workData.length > 0 && (
+              <ResumeSection<ResumeWorkItem>
+                items={workData}
+                title="Professional Experience"
               >
                 {({ getItemClassName, items }) => (
                   <>
                     {items.map((item, index) => (
-                      <SkillCategoryItem
-                        key={`${item.name}-${index}`}
+                      <WorkExperienceItem
+                        key={index}
                         item={item}
                         className={getItemClassName(item, index)}
                       />
@@ -92,35 +73,59 @@ function App({ data }: AppProps) {
                 )}
               </ResumeSection>
             )}
+          </Page.MainContent>
 
-            {(educationData.length > 0 || educationNoteData) && (
-              <ResumeSection items={educationData} title="Education">
-                {({ getItemClassName, items }) => (
-                  <>
-                    {items.map((item, index) => (
-                      <EducationEntryItem
-                        key={`${item.institution}-${item.startDate}-${index}`}
-                        item={item}
-                        className={getItemClassName(item, index)}
-                      />
-                    ))}
-                    {educationNoteData ? (
-                      <EducationNoteItem
-                        item={educationNoteData}
-                        className={joinClassNames(
-                          'mt-5',
-                          getPrintClassNames(educationNoteData)
-                        )}
-                      />
-                    ) : null}
-                  </>
-                )}
-              </ResumeSection>
-            )}
-          </Page.Sidebar>
-        )}
-      </Page.Body>
-    </Page>
+          {hasSideColumn && (
+            <Page.Sidebar placement="right">
+              {skillsData.length > 0 && (
+                <ResumeSection
+                  className="text-left"
+                  items={skillsData}
+                  title="Skills"
+                >
+                  {({ getItemClassName, items }) => (
+                    <>
+                      {items.map((item, index) => (
+                        <SkillCategoryItem
+                          key={`${item.name}-${index}`}
+                          item={item}
+                          className={getItemClassName(item, index)}
+                        />
+                      ))}
+                    </>
+                  )}
+                </ResumeSection>
+              )}
+
+              {(educationData.length > 0 || educationNoteData) && (
+                <ResumeSection items={educationData} title="Education">
+                  {({ getItemClassName, items }) => (
+                    <>
+                      {items.map((item, index) => (
+                        <EducationEntryItem
+                          key={`${item.institution}-${item.startDate}-${index}`}
+                          item={item}
+                          className={getItemClassName(item, index)}
+                        />
+                      ))}
+                      {educationNoteData ? (
+                        <EducationNoteItem
+                          item={educationNoteData}
+                          className={joinClassNames(
+                            'mt-5',
+                            getPrintClassNames(educationNoteData)
+                          )}
+                        />
+                      ) : null}
+                    </>
+                  )}
+                </ResumeSection>
+              )}
+            </Page.Sidebar>
+          )}
+        </Page.Body>
+      </Page>
+    </>
   );
 }
 

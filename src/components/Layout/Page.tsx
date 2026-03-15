@@ -102,7 +102,7 @@ function PageRoot({ className, ...props }: PageRootProps) {
     <div
       data-testid="page"
       className={joinClassNames(
-        'PageRoot mx-auto my-12.5 box-border h-auto min-h-[297mm] w-[210mm] max-w-[calc(100%-32px)] bg-white px-[10mm] py-[15mm] shadow-[1px_3px_8px_-1px_rgba(0,0,0,0.2)] print:m-0 print:h-auto print:min-h-0 print:w-auto print:max-w-none print:bg-transparent print:p-0 print:shadow-none',
+        'PageRoot relative z-10 mx-auto my-12.5 box-border h-auto min-h-[297mm] w-[210mm] max-w-[calc(100%-32px)] bg-white px-[10mm] py-[15mm] shadow-[1px_3px_8px_-1px_rgba(0,0,0,0.2)] print:m-0 print:h-auto print:min-h-0 print:w-auto print:max-w-none print:bg-transparent print:p-0 print:shadow-none',
         className
       )}
       {...props}
@@ -111,7 +111,7 @@ function PageRoot({ className, ...props }: PageRootProps) {
 }
 
 function PageHeader({ className, ...props }: PageHeaderProps) {
-  return <header data-testid="page-header" className={className} {...props} />;
+  return <header data-testid="page-header" className={joinClassNames("sticky bg-white top-0",className)} {...props} />;
 }
 
 function PageBody({ children, className, ...props }: PageBodyProps) {
