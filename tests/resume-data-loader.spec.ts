@@ -5,9 +5,15 @@ import path from 'node:path';
 import { expect, test } from '@playwright/test';
 
 import {
+  DEFAULT_RESUME_DATA_PATH,
+  LOCAL_RESUME_DATA_PATH,
+  RESUME_DATA_PATH_ENV_VAR,
+} from '../src/data/resume-data-paths';
+import {
   loadResumeData,
   resolveResumeDataPath,
 } from '../src/data/load-resume-data';
+import { redactResumeData } from '../src/features/pdf-download/build';
 
 const MINIMAL_RESUME_DATA = {
   basics: {
@@ -22,6 +28,14 @@ const MINIMAL_RESUME_DATA = {
 function writeFile(filePath: string, contents: string) {
   mkdirSync(path.dirname(filePath), { recursive: true });
   writeFileSync(filePath, contents);
+}
+
+function writeResumeDataEnv(envDir: string, resumeDataPath: string, fileName = '.env') {
+  writeFile(path.join(envDir, fileName), `${RESUME_DATA_PATH_ENV_VAR}=${resumeDataPath}\n`);
+}
+
+function resolveEnvResumeDataPath(envDir: string, resumeDataPath: string) {
+  return path.join(envDir, resumeDataPath);
 }
 
 function withTempEnvDir(
@@ -39,9 +53,9 @@ function withTempEnvDir(
 
 test('loads the configured sample path from .env', async () => {
   withTempEnvDir((envDir) => {
-    writeFile(path.join(envDir, '.env'), 'RESUME_DATA_PATH=src/data/resume.sample.json\n');
+    writeResumeDataEnv(envDir, DEFAULT_RESUME_DATA_PATH);
     writeFile(
-      path.join(envDir, 'src/data/resume.sample.json'),
+      resolveEnvResumeDataPath(envDir, DEFAULT_RESUME_DATA_PATH),
       JSON.stringify(MINIMAL_RESUME_DATA, null, 2)
     );
 
@@ -49,21 +63,21 @@ test('loads the configured sample path from .env', async () => {
 
     expect(resumeData.basics.name).toBe('John Doe');
     expect(resolveResumeDataPath({ envDir, mode: 'test', useProcessEnv: false })).toBe(
-      path.join(envDir, 'src/data/resume.sample.json')
+      resolveEnvResumeDataPath(envDir, DEFAULT_RESUME_DATA_PATH)
     );
   });
 });
 
 test('prefers .env.local over .env when both define RESUME_DATA_PATH', async () => {
   withTempEnvDir((envDir) => {
-    writeFile(path.join(envDir, '.env'), 'RESUME_DATA_PATH=src/data/resume.sample.json\n');
-    writeFile(path.join(envDir, '.env.local'), 'RESUME_DATA_PATH=src/data/resume.private.json\n');
+    writeResumeDataEnv(envDir, DEFAULT_RESUME_DATA_PATH);
+    writeResumeDataEnv(envDir, LOCAL_RESUME_DATA_PATH, '.env.local');
     writeFile(
-      path.join(envDir, 'src/data/resume.sample.json'),
+      resolveEnvResumeDataPath(envDir, DEFAULT_RESUME_DATA_PATH),
       JSON.stringify(MINIMAL_RESUME_DATA, null, 2)
     );
     writeFile(
-      path.join(envDir, 'src/data/resume.private.json'),
+      resolveEnvResumeDataPath(envDir, LOCAL_RESUME_DATA_PATH),
       JSON.stringify(
         {
           basics: {
@@ -84,9 +98,9 @@ test('prefers .env.local over .env when both define RESUME_DATA_PATH', async () 
 
 test('loads a configured local public profile photo path when the file exists', async () => {
   withTempEnvDir((envDir) => {
-    writeFile(path.join(envDir, '.env'), 'RESUME_DATA_PATH=src/data/resume.sample.json\n');
+    writeResumeDataEnv(envDir, DEFAULT_RESUME_DATA_PATH);
     writeFile(
-      path.join(envDir, 'src/data/resume.sample.json'),
+      resolveEnvResumeDataPath(envDir, DEFAULT_RESUME_DATA_PATH),
       JSON.stringify(
         {
           basics: {
@@ -108,6 +122,23 @@ test('loads a configured local public profile photo path when the file exists', 
   });
 });
 
+test('redacts private contact details from the public resume payload', async () => {
+  withTempEnvDir((envDir) => {
+    writeResumeDataEnv(envDir, DEFAULT_RESUME_DATA_PATH);
+    writeFile(
+      resolveEnvResumeDataPath(envDir, DEFAULT_RESUME_DATA_PATH),
+      JSON.stringify(MINIMAL_RESUME_DATA, null, 2)
+    );
+
+    const resumeData = loadResumeData({ envDir, mode: 'test', useProcessEnv: false });
+    const publicResumeData = redactResumeData(resumeData);
+
+    expect('email' in publicResumeData.basics).toBeFalsy();
+    expect('phone' in publicResumeData.basics).toBeFalsy();
+    expect(publicResumeData.basics.name).toBe('John Doe');
+  });
+});
+
 test('throws a clear error when the configured JSON file is missing', async () => {
   withTempEnvDir((envDir) => {
     writeFile(path.join(envDir, '.env'), 'RESUME_DATA_PATH=src/data/missing.json\n');
@@ -120,9 +151,9 @@ test('throws a clear error when the configured JSON file is missing', async () =
 
 test('throws a clear error when a configured local public profile photo file is missing', async () => {
   withTempEnvDir((envDir) => {
-    writeFile(path.join(envDir, '.env'), 'RESUME_DATA_PATH=src/data/resume.sample.json\n');
+    writeResumeDataEnv(envDir, DEFAULT_RESUME_DATA_PATH);
     writeFile(
-      path.join(envDir, 'src/data/resume.sample.json'),
+      resolveEnvResumeDataPath(envDir, DEFAULT_RESUME_DATA_PATH),
       JSON.stringify(
         {
           basics: {
@@ -145,8 +176,8 @@ test('throws a clear error when a configured local public profile photo file is 
 
 test('throws a clear error when the configured file is not valid JSON', async () => {
   withTempEnvDir((envDir) => {
-    writeFile(path.join(envDir, '.env'), 'RESUME_DATA_PATH=src/data/resume.sample.json\n');
-    writeFile(path.join(envDir, 'src/data/resume.sample.json'), '{ invalid json');
+    writeResumeDataEnv(envDir, DEFAULT_RESUME_DATA_PATH);
+    writeFile(resolveEnvResumeDataPath(envDir, DEFAULT_RESUME_DATA_PATH), '{ invalid json');
 
     expect(() =>
       loadResumeData({ envDir, mode: 'test', useProcessEnv: false })
@@ -156,9 +187,9 @@ test('throws a clear error when the configured file is not valid JSON', async ()
 
 test('throws a clear error when the configured JSON fails schema validation', async () => {
   withTempEnvDir((envDir) => {
-    writeFile(path.join(envDir, '.env'), 'RESUME_DATA_PATH=src/data/resume.sample.json\n');
+    writeResumeDataEnv(envDir, DEFAULT_RESUME_DATA_PATH);
     writeFile(
-      path.join(envDir, 'src/data/resume.sample.json'),
+      resolveEnvResumeDataPath(envDir, DEFAULT_RESUME_DATA_PATH),
       JSON.stringify({ basics: { name: 'Broken Doe' } }, null, 2)
     );
 

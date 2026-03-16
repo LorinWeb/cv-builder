@@ -21,9 +21,10 @@
 
 - For new components under `src/components`, also follow the local instructions in `src/components/AGENTS.md`.
 
-# Refactoring Tips
+# Refactoring Mandates
 
 - Remove dead code when the product surface has been intentionally dropped; do not keep compatibility layers without a clear owner.
+- Keep export surfaces minimal. Do not export code unless another file imports it, and when an export becomes unused, remove the export first and then delete the now-dead internal code.
 - Keep generic helpers in generic domains. Do not mix utility concerns such as class name joining into domain-specific files like `src/helpers/print.ts`.
 - Prefer moving code closer to its domain rather than adding more “misc” layers. Resume-specific rendering belongs with resume code, layout infrastructure belongs under `src/components/Layout`, and test bootstrapping belongs under `tests/support`.
 - Keep source files under 200 lines where practical. When a file grows past that, split by responsibility, not arbitrarily.

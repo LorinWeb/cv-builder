@@ -1,10 +1,16 @@
-import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, type PluginOption } from 'vite';
 
 import { loadResumeData, resolveResumeDataPath } from './src/data/load-resume-data';
+import {
+  getResumeRenderTarget,
+  redactResumeData,
+} from './src/features/pdf-download/build';
+import { resumePdfPlugin } from './src/features/pdf-download/build/vite-plugin';
 import { getDocumentTitle, getMetaDescription } from './src/helpers/seo';
 
 const RESUME_DATA_MODULE_ID = 'virtual:resume-data';
@@ -25,7 +31,12 @@ function isResumeDataJsonFile(file: string) {
 }
 
 function resumeDataPlugin(mode: string): PluginOption {
-  const getResumeData = () => loadResumeData({ mode });
+  const getResumeSourceData = () => loadResumeData({ mode });
+  const getPublicResumeData = () => redactResumeData(getResumeSourceData());
+  const getSerializedResumeData = () =>
+    getResumeRenderTarget() === 'pdf'
+      ? getResumeSourceData()
+      : getPublicResumeData();
 
   return {
     name: 'resume-data',
@@ -35,11 +46,9 @@ function resumeDataPlugin(mode: string): PluginOption {
       }
     },
     load(id) {
-      if (id !== RESUME_DATA_MODULE_RESOLVED_ID) {
-        return;
+      if (id === RESUME_DATA_MODULE_RESOLVED_ID) {
+        return `const resumeData = ${JSON.stringify(getSerializedResumeData())};\nexport default resumeData;\n`;
       }
-
-      return `const resumeData = ${JSON.stringify(getResumeData())};\nexport default resumeData;\n`;
     },
     buildStart() {
       this.addWatchFile(resolveResumeDataPath({ mode }));
@@ -52,15 +61,12 @@ function resumeDataPlugin(mode: string): PluginOption {
         return;
       }
 
-      const virtualModule = context.server.moduleGraph.getModuleById(
-        RESUME_DATA_MODULE_RESOLVED_ID
-      );
-      const resumeModule = context.server.moduleGraph.getModuleById(
-        fileURLToPath(new URL('./src/data/resume.ts', import.meta.url))
-      );
-      const modules = [virtualModule, resumeModule].filter(
-        (module): module is NonNullable<typeof module> => Boolean(module)
-      );
+      const modules = [
+        context.server.moduleGraph.getModuleById(RESUME_DATA_MODULE_RESOLVED_ID),
+        context.server.moduleGraph.getModuleById(
+          fileURLToPath(new URL('./src/data/resume.ts', import.meta.url))
+        ),
+      ].filter((module): module is NonNullable<typeof module> => Boolean(module));
 
       for (const module of modules) {
         context.server.moduleGraph.invalidateModule(module);
@@ -69,7 +75,7 @@ function resumeDataPlugin(mode: string): PluginOption {
       return modules;
     },
     transformIndexHtml(html) {
-      const resumeData = getResumeData();
+      const resumeData = getPublicResumeData();
       const description = getMetaDescription(resumeData);
       const title = getDocumentTitle(resumeData);
 
@@ -94,16 +100,22 @@ function resumeDataPlugin(mode: string): PluginOption {
 }
 
 export default defineConfig(({ mode }) => {
+  const renderTarget = getResumeRenderTarget();
+
   return {
     plugins: [
       react(),
       tailwindcss(),
       resumeDataPlugin(mode),
+      renderTarget === 'web' ? resumePdfPlugin() : null,
     ],
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
       },
+    },
+    define: {
+      __RESUME_RENDER_TARGET__: JSON.stringify(renderTarget),
     },
     publicDir: 'public',
     root: '.',
@@ -111,6 +123,7 @@ export default defineConfig(({ mode }) => {
       host: true,
     },
     build: {
+      outDir: process.env.RESUME_BUILD_OUT_DIR || 'dist',
       sourcemap: true,
       chunkSizeWarningLimit: 600,
       rollupOptions: {

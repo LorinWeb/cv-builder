@@ -10,10 +10,10 @@ import ResumeSection from './ResumeSection';
 import { joinClassNames } from '../helpers/classNames';
 import { getPrintClassNames } from '../helpers/print';
 import useElementVisibility from '../hooks/useElementVisibility';
-import type { ResumeData, ResumeWorkItem } from '../data/types/resume';
+import type { ResumeRuntimeData, ResumeWorkItem } from '../data/types/resume';
 
 interface AppProps {
-  data: ResumeData;
+  data: ResumeRuntimeData;
 }
 
 function App({ data }: AppProps) {

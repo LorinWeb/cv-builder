@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { ResumeData } from './types/resume';
+import type { ResumeSourceData } from './types/resume';
 
 const printConfigSchema = z.object({
   avoidPageBreakInside: z.boolean().optional(),
@@ -34,13 +34,13 @@ const resumePhotoSchema = z.object({
 });
 
 const resumeBasicsSchema = z.object({
-  email: z.string(),
+  email: z.string().optional(),
   impact: z.array(textValueSchema).optional(),
   label: z.string(),
   location: resumeLocationSchema.optional(),
   name: z.string(),
+  phone: z.string().optional(),
   photo: resumePhotoSchema.optional(),
-  phone: z.string(),
   profiles: z.array(resumeProfileSchema).optional(),
   summary: z.string(),
 });
@@ -138,7 +138,7 @@ export const resumeDataSchema = z.object({
   work: z.array(resumeWorkItemSchema).optional(),
 });
 
-export function parseResumeData(value: unknown): ResumeData {
+export function parseResumeData(value: unknown): ResumeSourceData {
   const result = resumeDataSchema.safeParse(value);
 
   if (!result.success) {
@@ -153,7 +153,7 @@ export function parseResumeData(value: unknown): ResumeData {
     throw new Error(`Resume data validation failed: ${issues}`);
   }
 
-  const parsed: ResumeData = result.data;
+  const parsed: ResumeSourceData = result.data;
 
   return parsed;
 }

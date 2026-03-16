@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './components/App';
 import resumeData from './data/resume';
 import { getDocumentTitle, getMetaDescription } from './helpers/seo';
-import type { ResumeData } from './data/types/resume';
+import type { ResumeRuntimeData } from './data/types/resume';
 import './styles/index.css';
 
 const container = document.getElementById('root');
@@ -14,7 +14,7 @@ if (!container) {
 
 const root = createRoot(container);
 
-function syncDocumentHead(data: ResumeData) {
+function syncDocumentHead(data: ResumeRuntimeData) {
   document.title = getDocumentTitle(data);
 
   let metaDescription = document.head.querySelector<HTMLMetaElement>(
@@ -30,7 +30,7 @@ function syncDocumentHead(data: ResumeData) {
   metaDescription.content = getMetaDescription(data);
 }
 
-function renderApp(data: ResumeData) {
+function renderApp(data: ResumeRuntimeData) {
   syncDocumentHead(data);
   root.render(<App data={data} />);
 }

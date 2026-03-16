@@ -1,7 +1,13 @@
 import { expect, test } from '@playwright/test';
 
+import {
+  DEFAULT_RESUME_DATA_PATH,
+  RESUME_DATA_PATH_ENV_VAR,
+} from '../src/data/resume-data-paths';
 import { loadResumeData } from '../src/data/load-resume-data';
 import { getDocumentTitle } from '../src/helpers/seo';
+
+process.env[RESUME_DATA_PATH_ENV_VAR] = DEFAULT_RESUME_DATA_PATH;
 
 const resumeData = loadResumeData({
   mode: 'test',

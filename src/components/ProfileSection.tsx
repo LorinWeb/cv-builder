@@ -1,44 +1,21 @@
 import type { ComponentPropsWithoutRef } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import { Download, Link2, Mail, MapPin, Phone } from 'lucide-react';
 
 import { usePageHeaderState } from './Layout/Page/pageHeaderState';
 import { joinClassNames } from '../helpers/classNames';
-import type {
-  ResumeBasics,
-  ResumeLocation,
-  ResumeProfile,
-} from '../data/types/resume';
+import { getProfileContactItems, usePdfDownload } from '../features/pdf-download';
+import type { ResumeBasics, ResumeSourceBasics } from '../data/types/resume';
 
-const COUNTRY_LABELS = {
-  UK: 'United Kingdom',
-  US: 'United States',
-} as const;
+const CONTACT_ICONS: Record<'email' | 'location' | 'phone' | 'profile', LucideIcon> = {
+  email: Mail,
+  location: MapPin,
+  phone: Phone,
+  profile: Link2,
+};
 
 interface ProfileSectionProps extends ComponentPropsWithoutRef<'div'> {
-  profileData: ResumeBasics;
-}
-
-function formatLocation(location: ResumeLocation = {}) {
-  const country =
-    location.country ||
-    (location.countryCode
-      ? COUNTRY_LABELS[location.countryCode as keyof typeof COUNTRY_LABELS] ||
-        location.countryCode
-      : undefined);
-
-  return [location.city, country].filter(Boolean).join(', ');
-}
-
-function formatProfileUrl(url: ResumeProfile['url']) {
-  try {
-    const parsedUrl = new URL(url);
-    return `${parsedUrl.host}${parsedUrl.pathname}`.replace(/\/$/, '');
-  } catch {
-    return url;
-  }
-}
-
-function formatPhoneHref(phoneNumber = '') {
-  return phoneNumber.replace(/[^\d+]/g, '');
+  profileData: ResumeBasics | ResumeSourceBasics;
 }
 
 function ProfileSection({
@@ -47,8 +24,8 @@ function ProfileSection({
   ...props
 }: ProfileSectionProps) {
   const { isStickyClone } = usePageHeaderState();
-  const profiles = profileData.profiles || [];
-  const location = formatLocation(profileData.location);
+  const contactItems = getProfileContactItems(profileData);
+  const { href, isAvailable, isPdfRenderTarget, label } = usePdfDownload();
   const photo = profileData.photo;
   const showCompactPhoto = !!photo && isStickyClone;
 
@@ -112,28 +89,53 @@ function ProfileSection({
       <div className="min-w-0 w-full">
         <ul
           data-testid="profile-contacts"
-          className="m-0 flex list-none flex-wrap justify-between gap-x-4.5 gap-y-2 pl-0 text-[0.8em]"
+          className="m-0 flex list-none flex-wrap justify-start gap-x-4.5 gap-y-2 pl-0 text-[0.8em]"
         >
-          <li className="list-none leading-[1.4] text-(--color-secondary)">
-            <a href={`mailto:${profileData.email}`} className="text-inherit no-underline">
-              {profileData.email}
-            </a>
-          </li>
-          <li className="list-none leading-[1.4] text-(--color-secondary)">
-            <a href={`tel:${formatPhoneHref(profileData.phone)}`} className="text-inherit no-underline">
-              {profileData.phone}
-            </a>
-          </li>
-          {location && (
-            <li className="list-none leading-[1.4] text-(--color-secondary)">{location}</li>
-          )}
-          {profiles.map((profile) => (
-            <li key={profile.url} className="list-none leading-[1.4] text-(--color-secondary)">
-              <a href={profile.url} className="text-inherit no-underline">
-                {formatProfileUrl(profile.url)}
+          {contactItems.map((item) => {
+            const Icon = CONTACT_ICONS[item.kind];
+
+            return (
+              <li
+                key={item.key}
+                data-testid={`profile-contact-${item.key}`}
+                className="list-none leading-[1.4] text-(--color-secondary)"
+              >
+                {item.href ? (
+                  <a
+                    href={item.href}
+                    className="inline-flex items-center gap-1.5 text-inherit no-underline"
+                  >
+                    <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                    <span className="min-w-0">{item.text}</span>
+                  </a>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                    <span className="min-w-0">{item.text}</span>
+                  </span>
+                )}
+              </li>
+            );
+          })}
+
+          {isAvailable && !isPdfRenderTarget ? (
+            <li
+              data-testid="profile-download"
+              className="list-none leading-[1.4] text-(--color-primary) print:hidden"
+            >
+              <a
+                href={href}
+                download
+                className="inline-flex items-center gap-1.5 rounded-full border border-(--color-header-border) px-3 py-1 text-inherit no-underline transition-colors hover:bg-[rgba(137,186,182,0.08)]"
+              >
+                <Download
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5 shrink-0"
+                />
+                <span>{label}</span>
               </a>
             </li>
-          ))}
+          ) : null}
         </ul>
       </div>
     </div>

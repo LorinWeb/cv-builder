@@ -1,6 +1,6 @@
 export interface PrintConfig {
-  printBreakBefore?: 'page';
   avoidPageBreakInside?: boolean;
+  printBreakBefore?: 'page';
 }
 
 export interface TextEntry extends PrintConfig {
@@ -20,8 +20,8 @@ export interface ResumeLocation {
 
 export interface ResumeProfile {
   network?: string;
-  username?: string;
   url: string;
+  username?: string;
 }
 
 export interface ResumePhoto {
@@ -30,15 +30,18 @@ export interface ResumePhoto {
 }
 
 export interface ResumeBasics {
-  email: string;
   impact?: TextValue[];
   label: string;
   location?: ResumeLocation;
   name: string;
   photo?: ResumePhoto;
-  phone: string;
   profiles?: ResumeProfile[];
   summary: string;
+}
+
+export interface ResumeSourceBasics extends ResumeBasics {
+  email?: string;
+  phone?: string;
 }
 
 export interface ResumeWorkEntry extends PrintConfig {
@@ -120,9 +123,8 @@ export interface ResumeLanguage extends PrintConfig {
   name: string;
 }
 
-export interface ResumeData {
+interface ResumeSections {
   awards?: ResumeAward[];
-  basics: ResumeBasics;
   education?: EducationItem[];
   educationNote?: EducationNote;
   interests?: ResumeInterest[];
@@ -133,3 +135,13 @@ export interface ResumeData {
   volunteer?: ResumeVolunteerItem[];
   work?: ResumeWorkItem[];
 }
+
+export interface ResumeData extends ResumeSections {
+  basics: ResumeBasics;
+}
+
+export interface ResumeSourceData extends ResumeSections {
+  basics: ResumeSourceBasics;
+}
+
+export type ResumeRuntimeData = ResumeData | ResumeSourceData;

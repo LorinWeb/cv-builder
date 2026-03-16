@@ -1,11 +1,11 @@
-import type { ResumeData } from '../data/types/resume';
+import type { ResumeData, ResumeSourceData } from '../data/types/resume';
 
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
 }
 
 export function getDocumentTitle(
-  resumeData: Pick<ResumeData, 'basics'>
+  resumeData: Pick<ResumeData, 'basics'> | Pick<ResumeSourceData, 'basics'>
 ): string {
   const rawName = resumeData.basics?.name;
 
@@ -23,7 +23,7 @@ export function getDocumentTitle(
 }
 
 export function getMetaDescription(
-  resumeData: Pick<ResumeData, 'basics'>
+  resumeData: Pick<ResumeData, 'basics'> | Pick<ResumeSourceData, 'basics'>
 ): string {
   const rawSummary = resumeData.basics?.summary;
 
