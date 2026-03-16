@@ -107,6 +107,9 @@ export default defineConfig(({ mode }) => {
     },
     publicDir: 'public',
     root: '.',
+    server: {
+      host: true,
+    },
     build: {
       sourcemap: true,
       chunkSizeWarningLimit: 600,
