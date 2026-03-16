@@ -20,3 +20,13 @@
 # New component creation rules
 
 - For new components under `src/components`, also follow the local instructions in `src/components/AGENTS.md`.
+
+# Refactoring Tips
+
+- Remove dead code when the product surface has been intentionally dropped; do not keep compatibility layers without a clear owner.
+- Keep generic helpers in generic domains. Do not mix utility concerns such as class name joining into domain-specific files like `src/helpers/print.ts`.
+- Prefer moving code closer to its domain rather than adding more “misc” layers. Resume-specific rendering belongs with resume code, layout infrastructure belongs under `src/components/Layout`, and test bootstrapping belongs under `tests/support`.
+- Keep source files under 200 lines where practical. When a file grows past that, split by responsibility, not arbitrarily.
+- Split large React files by separating pure logic from framework wiring. Examples: move canvas drawing/math out of components, and move DOM observer/state orchestration out of layout shells.
+- Before moving code, confirm the destination reduces coupling instead of scattering related pieces across unrelated folders.
+- Treat visual refactors as high-risk even when behavior is unchanged. Run the full verification pass, including Playwright visual tests, after structural cleanup.

@@ -1,5 +1,6 @@
 import { formatDateRangeWithDuration } from '../../helpers/date-range';
-import { getPrintClassNames, joinClassNames } from '../../helpers/print';
+import { joinClassNames } from '../../helpers/classNames';
+import { getPrintClassNames } from '../../helpers/print';
 import { getTextValue } from '../../helpers/text-value';
 import type {
   ResumeWorkEntry,

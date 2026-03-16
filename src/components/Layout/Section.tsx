@@ -1,13 +1,11 @@
 import type { ComponentPropsWithoutRef, JSX } from 'react';
 
-import { joinClassNames } from '../../helpers/print';
-import { useStickyState, type StickyProp } from './sticky';
+import { joinClassNames } from '../../helpers/classNames';
 
 type SectionRootProps = ComponentPropsWithoutRef<'section'>;
-type SectionTitleProps = ComponentPropsWithoutRef<'h2'> & {
-  sticky?: StickyProp;
-};
+type SectionTitleProps = ComponentPropsWithoutRef<'h2'>;
 type SectionBodyProps = ComponentPropsWithoutRef<'div'>;
+
 function SectionRoot({ className, ...props }: SectionRootProps) {
   return (
     <section
@@ -18,20 +16,14 @@ function SectionRoot({ className, ...props }: SectionRootProps) {
   );
 }
 
-function SectionTitle({ className, sticky, style, ...props }: SectionTitleProps) {
-  const { normalizedSticky, ref, stickyStyle } = useStickyState(sticky);
-
+function SectionTitle({ className, ...props }: SectionTitleProps) {
   return (
     <h2
-      ref={ref}
       data-testid="section-title"
-      data-sticky-position={normalizedSticky?.position}
       className={joinClassNames(
         'mt-2.5 flex items-center justify-between font-[sans-serif] font-medium leading-[1.6em] text-(--color-secondary)',
-        normalizedSticky && 'bg-white z-20',
         className
       )}
-      style={stickyStyle ? { ...style, ...stickyStyle } : style}
       {...props}
     />
   );

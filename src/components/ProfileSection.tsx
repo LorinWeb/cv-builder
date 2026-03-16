@@ -1,7 +1,7 @@
 import type { ComponentPropsWithoutRef } from 'react';
 
-import { usePageHeaderState } from './Layout/pageHeaderState';
-import { joinClassNames } from '../helpers/print';
+import { usePageHeaderState } from './Layout/Page/pageHeaderState';
+import { joinClassNames } from '../helpers/classNames';
 import type {
   ResumeBasics,
   ResumeLocation,

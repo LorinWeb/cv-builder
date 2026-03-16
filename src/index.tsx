@@ -4,7 +4,7 @@ import App from './components/App';
 import resumeData from './data/resume';
 import { getDocumentTitle, getMetaDescription } from './helpers/seo';
 import type { ResumeData } from './data/types/resume';
-import './styles/app.css';
+import './styles/index.css';
 
 const container = document.getElementById('root');
 

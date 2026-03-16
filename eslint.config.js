@@ -56,7 +56,7 @@ export default [
         'error',
         {
           calleeFunctions: ['cn', 'clsx', 'classNames', 'twMerge', 'cva', 'joinClassNames'],
-          cssPath: './src/styles/app.css',
+          cssPath: './src/styles/index.css',
         },
       ],
     },

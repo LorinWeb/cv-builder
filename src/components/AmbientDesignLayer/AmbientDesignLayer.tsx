@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { joinClassNames } from '../../helpers/print';
+import { joinClassNames } from '../../helpers/classNames';
 import { AmbientDesignScene } from './AmbientDesignScene';
 
 function getPrefersReducedMotion() {

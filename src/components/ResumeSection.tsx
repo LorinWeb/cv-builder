@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 
 import Section from './Layout/Section';
-import { getItemPrintClassNames, joinClassNames } from '../helpers/print';
+import { joinClassNames } from '../helpers/classNames';
+import { getItemPrintClassNames } from '../helpers/print';
 import type { PrintConfig } from '../data/types/resume';
 
 type ResumeSectionItem = PrintConfig | string | null | undefined;

@@ -1,24 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { getStickyStyle, normalizeStickyConfig } from '../src/components/Layout/sticky';
-
-async function gotoResume(page: Page, media: 'print' | 'screen' = 'screen') {
-  await page.emulateMedia({
-    media,
-    reducedMotion: 'reduce',
-  });
-  await page.goto('/');
-  await page.waitForLoadState('networkidle');
-  await page.evaluate(async () => {
-    await document.fonts.ready;
-  });
-  await page.waitForFunction(() => {
-    const layer = document.querySelector('[data-testid="ambient-design-layer"]');
-
-    return !layer || layer.getAttribute('data-scene-state') === 'ready';
-  });
-  await page.waitForTimeout(200);
-}
+import {
+  getStickyStyle,
+  normalizeStickyConfig,
+} from '../src/components/Layout/Page/stickyConfig';
+import { gotoResume } from './support/resume-page';
 
 async function scrollHeaderIntoStickyRange(page: Page) {
   await page.evaluate(() => {

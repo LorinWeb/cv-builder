@@ -1,12 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-async function waitForAmbientDesignReady(page: Page) {
-  await page.waitForFunction(() => {
-    const layer = document.querySelector('[data-testid="ambient-design-layer"]');
-
-    return !layer || layer.getAttribute('data-scene-state') === 'ready';
-  });
-}
+import { waitForAmbientDesignReady } from './support/resume-page';
 
 test('renders the ambient host without blocking the resume content', async ({
   page,

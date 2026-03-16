@@ -7,7 +7,8 @@ import SkillCategoryItem from './ItemRenderers/SkillCategoryItem';
 import WorkExperienceItem from './ItemRenderers/WorkExperienceItem';
 import ProfileSection from './ProfileSection';
 import ResumeSection from './ResumeSection';
-import { getPrintClassNames, joinClassNames } from '../helpers/print';
+import { joinClassNames } from '../helpers/classNames';
+import { getPrintClassNames } from '../helpers/print';
 import useElementVisibility from '../hooks/useElementVisibility';
 import type { ResumeData, ResumeWorkItem } from '../data/types/resume';
 

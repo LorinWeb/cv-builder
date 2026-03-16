@@ -1,11 +1,5 @@
 import type { PrintConfig } from '../data/types/resume';
 
-type ClassNameValue = string | false | null | undefined;
-
-export const joinClassNames = (...classNames: ClassNameValue[]) => {
-  return classNames.filter(Boolean).join(' ');
-};
-
 export const getPrintClassNames = (config: PrintConfig = {}) => {
   const classes = [];
 

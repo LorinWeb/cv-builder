@@ -1,22 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-async function gotoResume(page: Page, media: 'print' | 'screen' = 'screen') {
-  await page.emulateMedia({
-    media,
-    reducedMotion: 'reduce',
-  });
-  await page.goto('/');
-  await page.waitForLoadState('networkidle');
-  await page.evaluate(async () => {
-    await document.fonts.ready;
-  });
-  await page.waitForFunction(() => {
-    const layer = document.querySelector('[data-testid="ambient-design-layer"]');
-
-    return !layer || layer.getAttribute('data-scene-state') === 'ready';
-  });
-  await page.waitForTimeout(200);
-}
+import { gotoResume } from './support/resume-page';
 
 async function scrollStandalonePhotoOutOfView(page: Page) {
   await page.evaluate(() => {
