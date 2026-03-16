@@ -78,6 +78,25 @@ async function getStickyMetrics(
   }, sectionTestId);
 }
 
+async function getHeaderHorizontalBounds(page: Page) {
+  return page.evaluate(() => {
+    const stickyHeader =
+      document.querySelector('.PageHeaderPortalRoot [data-testid="page-header"]') ||
+      document.querySelector('[data-testid="page-header"]');
+
+    if (!(stickyHeader instanceof HTMLElement)) {
+      throw new Error('Expected page header to be present.');
+    }
+
+    const rect = stickyHeader.getBoundingClientRect();
+
+    return {
+      left: rect.left,
+      right: rect.right,
+    };
+  });
+}
+
 test('normalizes boolean and configured sticky props', async () => {
   expect(normalizeStickyConfig(false)).toBeNull();
   expect(normalizeStickyConfig(true)).toEqual({
@@ -150,7 +169,11 @@ test('keeps the page header sticky while section titles remain in normal flow', 
   expect(initialMetrics.title.position).toBe('static');
   expect(initialMetrics.title.boxShadow).toBe('none');
 
-  await page.setViewportSize({ width: 639, height: 900 });
+  await page.setViewportSize({ width: 700, height: 900 });
+  await gotoResume(page);
+
+  const mediumBeforeStickyBounds = await getHeaderHorizontalBounds(page);
+
   await scrollHeaderIntoStickyRange(page);
 
   await expect
@@ -158,10 +181,11 @@ test('keeps the page header sticky while section titles remain in normal flow', 
     .toBe('true');
 
   const resizedMetrics = await getStickyMetrics(page);
-  const resizedScrollY = await page.evaluate(() => window.scrollY);
+  const mediumAfterStickyBounds = await getHeaderHorizontalBounds(page);
 
   expect(resizedMetrics.header.dataStuck).toBe('true');
-  expect(resizedScrollY).toBeGreaterThan(0);
+  expect(mediumAfterStickyBounds.left).toBeCloseTo(mediumBeforeStickyBounds.left, 1);
+  expect(mediumAfterStickyBounds.right).toBeCloseTo(mediumBeforeStickyBounds.right, 1);
   expect(resizedMetrics.title.stickyPosition).toBeNull();
   expect(resizedMetrics.title.position).toBe('static');
 });

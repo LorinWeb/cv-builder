@@ -80,8 +80,6 @@ function PageSidebar({ placement, className, ...props }: PageSidebarProps) {
       className={joinClassNames(
         'min-w-0 box-border w-full space-y-7 max-[640px]:col-auto max-[640px]:px-0',
         getSidebarColumnClassName(layout, placement),
-        placement === 'left' && 'pr-1.5',
-        placement === 'right' && 'pl-1.5',
         className
       )}
       {...props}

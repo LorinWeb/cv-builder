@@ -12,6 +12,11 @@
     padding-top: env(safe-area-inset-top, 0px);
   }
 
+  .PageHeaderPortalFrame {
+    max-width: none;
+    width: 100%;
+  }
+
   .PageRoot {
     background-color: #fff;
     backdrop-filter: none;

@@ -92,7 +92,7 @@ export const PageHeader = forwardRef<HTMLElement, PageHeaderProps>(function Page
               data-sticky-position={stickyPosition}
               style={portalRootStyle}
             >
-              <div className="pointer-events-auto mx-auto box-border w-[210mm] max-w-[calc(100%-32px)] px-[10mm] max-[640px]:w-full max-[640px]:max-w-none">
+              <div className="PageHeaderPortalFrame pointer-events-auto mx-auto box-border w-[210mm] max-w-[calc(100%-32px)] px-[10mm]">
                 {renderHeader(true)}
               </div>
             </div>,
