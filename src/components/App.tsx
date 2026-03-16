@@ -1,14 +1,12 @@
 import Page from './Layout/Page';
-import AchievementItem from './ItemRenderers/AchievementItem';
 import { AmbientDesignLayer } from './AmbientDesignLayer';
 import EducationEntryItem from './ItemRenderers/EducationEntryItem';
-import EducationNoteItem from './ItemRenderers/EducationNoteItem';
+import AchievementItem from './ItemRenderers/AchievementItem';
 import SkillCategoryItem from './ItemRenderers/SkillCategoryItem';
 import WorkExperienceItem from './ItemRenderers/WorkExperienceItem';
 import ProfileSection from './ProfileSection';
 import ResumeSection from './ResumeSection';
 import { joinClassNames } from '../helpers/classNames';
-import { getPrintClassNames } from '../helpers/print';
 import useElementVisibility from '../hooks/useElementVisibility';
 import type { ResumeRuntimeData, ResumeWorkItem } from '../data/types/resume';
 
@@ -22,12 +20,12 @@ function App({ data }: AppProps) {
   const workData = data.work || [];
   const skillsData = data.skills || [];
   const educationData = data.education || [];
-  const educationNoteData = data.educationNote;
   const impactData = profileData.impact || [];
+  const summary = profileData.summary;
   const { isVisible: isStandalonePhotoVisible, ref: standalonePhotoRef } =
     useElementVisibility<HTMLImageElement>();
   const hasSideColumn =
-    skillsData.length > 0 || educationData.length > 0 || !!educationNoteData;
+    !!summary || skillsData.length > 0 || educationData.length > 0;
 
   return (
     <>
@@ -61,9 +59,6 @@ function App({ data }: AppProps) {
 
         <Page.Body>
           <Page.MainContent>
-            <ResumeSection title="Summary">
-              {profileData.summary}
-            </ResumeSection>
 
             {impactData.length > 0 && (
               <ResumeSection items={impactData} title="Selected Achievements">
@@ -100,6 +95,8 @@ function App({ data }: AppProps) {
 
           {hasSideColumn && (
             <Page.Sidebar placement="right">
+              {summary ? <ResumeSection title="Summary">{summary}</ResumeSection> : null}
+
               {skillsData.length > 0 && (
                 <ResumeSection className="text-left" items={skillsData} title="Skills">
                   {({ getItemClassName, items }) => (
@@ -116,7 +113,7 @@ function App({ data }: AppProps) {
                 </ResumeSection>
               )}
 
-              {(educationData.length > 0 || educationNoteData) && (
+              {educationData.length > 0 && (
                 <ResumeSection items={educationData} title="Education">
                   {({ getItemClassName, items }) => (
                     <>
@@ -127,15 +124,6 @@ function App({ data }: AppProps) {
                           className={getItemClassName(item, index)}
                         />
                       ))}
-                      {educationNoteData ? (
-                        <EducationNoteItem
-                          item={educationNoteData}
-                          className={joinClassNames(
-                            'mt-5',
-                            getPrintClassNames(educationNoteData)
-                          )}
-                        />
-                      ) : null}
                     </>
                   )}
                 </ResumeSection>

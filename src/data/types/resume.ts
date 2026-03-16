@@ -78,11 +78,6 @@ export interface EducationItem extends PrintConfig {
   studyType: string;
 }
 
-export interface EducationNote extends PrintConfig {
-  summary: string;
-  title: string;
-}
-
 export interface ResumeVolunteerItem extends PrintConfig {
   endDate?: string;
   highlights?: TextValue[];
@@ -126,7 +121,6 @@ export interface ResumeLanguage extends PrintConfig {
 interface ResumeSections {
   awards?: ResumeAward[];
   education?: EducationItem[];
-  educationNote?: EducationNote;
   interests?: ResumeInterest[];
   languages?: ResumeLanguage[];
   publications?: ResumePublication[];

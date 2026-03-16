@@ -14,7 +14,7 @@ function SkillCategoryItem({ className, item }: SkillCategoryItemProps) {
       </h3>
       <ul className="mb-2.5 mt-0 list-square pl-5">
         {item.keywords.map((keyword, index) => (
-          <li key={index} className="text-[1em] font-light leading-[1.4em]">
+          <li key={index} className="font-light leading-[1.4em]">
             {getTextValue(keyword)}
           </li>
         ))}

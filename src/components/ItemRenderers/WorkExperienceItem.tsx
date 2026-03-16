@@ -47,7 +47,7 @@ function renderHighlights(highlights?: TextValue[]) {
 
   return (
     <div data-testid="work-experience-highlights">
-      <ul className="mt-0 list-square pl-5 text-[0.9em] font-light leading-[1.3em]">
+      <ul className="mt-0 list-square pl-5 font-light leading-[1.3em]">
         {highlights.map((highlight, index) => (
           <li key={index}>{getTextValue(highlight)}</li>
         ))}
@@ -74,7 +74,7 @@ function renderSingleWorkItem(item: ResumeWorkEntry, className?: string) {
       <p className="my-[0.5em] mt-0 block text-[0.85em]">
         {formatDateRangeWithDuration(startDate, endDate)}
       </p>
-      <p className="my-[0.5em] mb-0 text-[0.9em] leading-[1.3em]">{summary}</p>
+      <p className="my-[0.5em] mb-0 leading-[1.3em]">{summary}</p>
       {renderHighlights(highlights)}
     </article>
   );
@@ -93,7 +93,7 @@ function renderProgressionEntry(entry: ResumeWorkEntry) {
       <p className="my-[0.5em] mt-0 block text-[0.85em]">
         {formatDateRangeWithDuration(entry.startDate, entry.endDate)}
       </p>
-      <p className="my-[0.5em] mb-0 text-[0.9em] leading-[1.3em]">
+      <p className="my-[0.5em] mb-0 leading-[1.3em]">
         {entry.summary}
       </p>
       {renderHighlights(entry.highlights)}

@@ -79,11 +79,6 @@ const educationItemSchema = printConfigSchema.extend({
   studyType: z.string(),
 });
 
-const educationNoteSchema = printConfigSchema.extend({
-  summary: z.string(),
-  title: z.string(),
-});
-
 const resumeVolunteerItemSchema = printConfigSchema.extend({
   endDate: z.string().optional(),
   highlights: z.array(textValueSchema).optional(),
@@ -128,7 +123,6 @@ export const resumeDataSchema = z.object({
   awards: z.array(resumeAwardSchema).optional(),
   basics: resumeBasicsSchema,
   education: z.array(educationItemSchema).optional(),
-  educationNote: educationNoteSchema.optional(),
   interests: z.array(resumeInterestSchema).optional(),
   languages: z.array(resumeLanguageSchema).optional(),
   publications: z.array(resumePublicationSchema).optional(),

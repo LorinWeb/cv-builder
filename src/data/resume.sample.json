@@ -134,7 +134,7 @@
       "avoidPageBreakInside": true
     },
     {
-      "company": "Various Clients",
+      "company": "Acme Systems",
       "position": "Software Engineer",
       "startDate": "2011-01-03",
       "endDate": "2016-05-27",
@@ -208,10 +208,6 @@
       ]
     }
   ],
-  "educationNote": {
-    "title": "Template Note",
-    "summary": "This resume uses fictional data so the project can be shared publicly as a reusable template without exposing personal information."
-  },
   "languages": [
     {
       "name": "English",
