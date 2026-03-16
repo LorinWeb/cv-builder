@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 
 import Section from './Layout/Section';
-import type { StickyProp } from './Layout/sticky';
 import { getItemPrintClassNames, joinClassNames } from '../helpers/print';
 import type { PrintConfig } from '../data/types/resume';
 
@@ -10,7 +9,6 @@ type ResumeSectionItem = PrintConfig | string | null | undefined;
 interface ResumeSectionCommonProps {
   className?: string;
   title?: string;
-  titleSticky?: StickyProp;
 }
 
 interface ResumeSectionTextProps extends ResumeSectionCommonProps {
@@ -95,7 +93,7 @@ function ResumeSection<TItem extends ResumeSectionItem = never>(
       className={sectionClassName}
       data-testid={getResumeSectionTestId(props.title)}
     >
-      {props.title ? <Section.Title sticky={props.titleSticky}>{props.title}</Section.Title> : null}
+      {props.title ? <Section.Title>{props.title}</Section.Title> : null}
       <Section.Body>{bodyContent}</Section.Body>
     </Section>
   );

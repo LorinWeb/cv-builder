@@ -1,5 +1,4 @@
 import Page from './Layout/Page';
-import type { StickyConfig } from './Layout/sticky';
 import AchievementItem from './ItemRenderers/AchievementItem';
 import { AmbientDesignLayer } from './AmbientDesignLayer';
 import EducationEntryItem from './ItemRenderers/EducationEntryItem';
@@ -10,7 +9,6 @@ import ProfileSection from './ProfileSection';
 import ResumeSection from './ResumeSection';
 import { getPrintClassNames, joinClassNames } from '../helpers/print';
 import useElementVisibility from '../hooks/useElementVisibility';
-import useObservedElementHeight from '../hooks/useObservedElementHeight';
 import type { ResumeData, ResumeWorkItem } from '../data/types/resume';
 
 interface AppProps {
@@ -25,17 +23,10 @@ function App({ data }: AppProps) {
   const educationData = data.education || [];
   const educationNoteData = data.educationNote;
   const impactData = profileData.impact || [];
-  const { height: headerHeight, ref: headerRef } =
-    useObservedElementHeight<HTMLElement>();
   const { isVisible: isStandalonePhotoVisible, ref: standalonePhotoRef } =
     useElementVisibility<HTMLImageElement>();
   const hasSideColumn =
     skillsData.length > 0 || educationData.length > 0 || !!educationNoteData;
-  const compactPhotoVisible = !!profilePhoto && !isStandalonePhotoVisible;
-  const titleSticky: StickyConfig = {
-    offset: headerHeight,
-    position: 'top',
-  };
 
   return (
     <>
@@ -44,7 +35,7 @@ function App({ data }: AppProps) {
       {profilePhoto ? (
         <div
           data-testid="profile-photo-standalone-frame"
-          className="relative z-10 mx-auto mt-12.5 mb-0 flex w-[210mm] max-w-[calc(100%-32px)] justify-center px-[10mm] pb-10 md:pb-0 print:hidden"
+          className="relative z-10 mx-auto my-12.5 flex w-[210mm] max-w-[calc(100%-32px)] justify-center px-[10mm] print:hidden"
         >
           <img
             ref={standalonePhotoRef}
@@ -63,25 +54,18 @@ function App({ data }: AppProps) {
       ) : null}
 
       <Page data-testid="app">
-        <Page.Header ref={headerRef} sticky>
-          <ProfileSection
-            profileData={profileData}
-            compactPhotoVisible={compactPhotoVisible}
-          />
+        <Page.Header sticky>
+          <ProfileSection profileData={profileData} />
         </Page.Header>
 
         <Page.Body>
           <Page.MainContent>
-            <ResumeSection title="Professional Summary" titleSticky={titleSticky}>
+            <ResumeSection title="Professional Summary">
               {profileData.summary}
             </ResumeSection>
 
             {impactData.length > 0 && (
-              <ResumeSection
-                items={impactData}
-                title="Selected Achievements"
-                titleSticky={titleSticky}
-              >
+              <ResumeSection items={impactData} title="Selected Achievements">
                 {({ getItemClassName, items }) => (
                   <ul className="mt-2 list-square pl-5 text-[1em] font-light leading-[1.35]">
                     {items.map((item, index) => (
@@ -97,11 +81,7 @@ function App({ data }: AppProps) {
             )}
 
             {workData.length > 0 && (
-              <ResumeSection<ResumeWorkItem>
-                items={workData}
-                title="Professional Experience"
-                titleSticky={titleSticky}
-              >
+              <ResumeSection<ResumeWorkItem> items={workData} title="Professional Experience">
                 {({ getItemClassName, items }) => (
                   <>
                     {items.map((item, index) => (
@@ -120,12 +100,7 @@ function App({ data }: AppProps) {
           {hasSideColumn && (
             <Page.Sidebar placement="right">
               {skillsData.length > 0 && (
-                <ResumeSection
-                  className="text-left"
-                  items={skillsData}
-                  title="Skills"
-                  titleSticky={titleSticky}
-                >
+                <ResumeSection className="text-left" items={skillsData} title="Skills">
                   {({ getItemClassName, items }) => (
                     <>
                       {items.map((item, index) => (
@@ -141,11 +116,7 @@ function App({ data }: AppProps) {
               )}
 
               {(educationData.length > 0 || educationNoteData) && (
-                <ResumeSection
-                  items={educationData}
-                  title="Education"
-                  titleSticky={titleSticky}
-                >
+                <ResumeSection items={educationData} title="Education">
                   {({ getItemClassName, items }) => (
                     <>
                       {items.map((item, index) => (

@@ -1,5 +1,6 @@
 import type { ComponentPropsWithoutRef } from 'react';
 
+import { usePageHeaderState } from './Layout/pageHeaderState';
 import { joinClassNames } from '../helpers/print';
 import type {
   ResumeBasics,
@@ -13,7 +14,6 @@ const COUNTRY_LABELS = {
 } as const;
 
 interface ProfileSectionProps extends ComponentPropsWithoutRef<'div'> {
-  compactPhotoVisible?: boolean;
   profileData: ResumeBasics;
 }
 
@@ -43,14 +43,14 @@ function formatPhoneHref(phoneNumber = '') {
 
 function ProfileSection({
   profileData,
-  compactPhotoVisible = false,
   className,
   ...props
 }: ProfileSectionProps) {
+  const { isStickyClone } = usePageHeaderState();
   const profiles = profileData.profiles || [];
   const location = formatLocation(profileData.location);
   const photo = profileData.photo;
-  const showCompactPhoto = compactPhotoVisible && !!photo;
+  const showCompactPhoto = !!photo && isStickyClone;
 
   return (
     <div

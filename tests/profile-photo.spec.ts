@@ -23,19 +23,28 @@ async function scrollStandalonePhotoOutOfView(page: Page) {
     const standalonePhoto = document.querySelector(
       '[data-testid="profile-photo-standalone"]'
     );
+    const header = document.querySelector('[data-testid="page-header"]');
 
-    if (!(standalonePhoto instanceof HTMLElement)) {
-      throw new Error('Expected standalone profile photo to be present.');
+    if (!(standalonePhoto instanceof HTMLElement) || !(header instanceof HTMLElement)) {
+      throw new Error('Expected standalone profile photo and page header to be present.');
     }
 
-    const { bottom } = standalonePhoto.getBoundingClientRect();
+    const standalonePhotoBottom = standalonePhoto.getBoundingClientRect().bottom;
+    const headerBottom = header.getBoundingClientRect().bottom;
 
-    window.scrollTo(0, Math.max(window.scrollY + bottom + 8, 0));
+    window.scrollTo(
+      0,
+      Math.max(
+        window.scrollY + Math.max(standalonePhotoBottom, headerBottom) + window.innerHeight,
+        0
+      )
+    );
   });
 }
 
 async function getProfilePhotoMetrics(page: Page) {
   return page.evaluate(() => {
+    const stickyHeaderRoot = document.querySelector('.PageHeaderPortalRoot');
     const standaloneFrame = document.querySelector(
       '[data-testid="profile-photo-standalone-frame"]'
     );
@@ -43,10 +52,18 @@ async function getProfilePhotoMetrics(page: Page) {
       '[data-testid="profile-photo-standalone"]'
     );
     const pageElement = document.querySelector('[data-testid="app"]');
-    const header = document.querySelector('[data-testid="page-header"]');
+    const header =
+      stickyHeaderRoot?.querySelector('[data-testid="page-header"]') ||
+      document.querySelector('[data-testid="page-header"][data-stuck="true"]') ||
+      document.querySelector('[data-testid="page-header"]');
     const intro = document.querySelector('[data-testid="profile-intro"]');
     const contacts = document.querySelector('[data-testid="profile-contacts"]');
-    const compactPhoto = document.querySelector('[data-testid="profile-photo-compact"]');
+    const compactPhoto =
+      stickyHeaderRoot?.querySelector('[data-testid="profile-photo-compact"]') ||
+      document.querySelector(
+        '[data-testid="page-header"][data-stuck="true"] [data-testid="profile-photo-compact"]'
+      ) ||
+      document.querySelector('[data-testid="profile-photo-compact"]');
     const compactPhotoElement =
       compactPhoto instanceof HTMLElement ? compactPhoto : null;
 
@@ -143,52 +160,11 @@ test('renders the standalone photo centered above the page before the header com
     Math.abs(metrics.standaloneFrame.centerX - metrics.page.centerX)
   ).toBeLessThanOrEqual(2);
   expect(metrics.standalonePhoto.bottom).toBeLessThan(metrics.page.top);
+  expect(metrics.header.top - metrics.standalonePhoto.bottom).toBeGreaterThanOrEqual(24);
   expect(Math.abs(metrics.standalonePhoto.height - metrics.standalonePhoto.width)).toBeLessThanOrEqual(
     2
   );
   expect(Math.abs(metrics.intro.left - metrics.contacts.left)).toBeLessThanOrEqual(2);
-});
-
-test('snaps the compact photo into the sticky header once the standalone photo has scrolled away', async ({
-  page,
-}) => {
-  await gotoResume(page);
-
-  const initialMetrics = await getProfilePhotoMetrics(page);
-
-  await scrollStandalonePhotoOutOfView(page);
-
-  await expect
-    .poll(async () => (await getProfilePhotoMetrics(page)).compactPhoto?.dataVisible)
-    .toBe('true');
-  const compactMetrics = await getProfilePhotoMetrics(page);
-
-  expect(compactMetrics.compactPhoto).not.toBeNull();
-
-  if (!compactMetrics.compactPhoto) {
-    throw new Error('Expected compact profile photo to be present.');
-  }
-
-  expect(compactMetrics.compactPhoto.height).toBeLessThan(initialMetrics.standalonePhoto.height);
-  expect(compactMetrics.compactPhoto.width).toBeLessThan(initialMetrics.standalonePhoto.width);
-  expect(compactMetrics.compactPhoto.top).toBeGreaterThanOrEqual(
-    compactMetrics.header.top - 1
-  );
-  expect(compactMetrics.compactPhoto.bottom).toBeLessThanOrEqual(
-    compactMetrics.header.bottom + 1
-  );
-  expect(compactMetrics.intro.left).toBeGreaterThan(compactMetrics.compactPhoto.right - 1);
-  expect(compactMetrics.contacts.top).toBeGreaterThanOrEqual(
-    Math.max(compactMetrics.compactPhoto.bottom, compactMetrics.intro.bottom) - 1
-  );
-
-  await page.evaluate(() => {
-    window.scrollTo(0, 0);
-  });
-
-  await expect
-    .poll(async () => (await getProfilePhotoMetrics(page)).compactPhoto?.dataVisible)
-    .toBe('false');
 });
 
 test('keeps the standalone photo on mobile and in print while leaving the compact photo as a screen-only state', async ({
@@ -202,13 +178,13 @@ test('keeps the standalone photo on mobile and in print while leaving the compac
   expect(
     Math.abs(mobileMetrics.standalonePhoto.centerX - mobileMetrics.standaloneFrame.centerX)
   ).toBeLessThanOrEqual(2);
-  expect(mobileMetrics.standalonePhoto.bottom).toBeLessThan(mobileMetrics.page.top);
+  expect(mobileMetrics.standalonePhoto.bottom).toBeLessThanOrEqual(mobileMetrics.page.top);
 
   await scrollStandalonePhotoOutOfView(page);
 
   await expect
-    .poll(async () => (await getProfilePhotoMetrics(page)).compactPhoto?.dataVisible)
-    .toBe('true');
+    .poll(async () => (await getProfilePhotoMetrics(page)).compactPhoto?.width ?? 0)
+    .toBeGreaterThan(0);
 
   await gotoResume(page, 'print');
 

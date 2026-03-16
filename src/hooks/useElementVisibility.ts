@@ -1,8 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 function useElementVisibility<TElement extends HTMLElement>() {
   const [element, setElement] = useState<TElement | null>(null);
   const [isVisible, setIsVisible] = useState(true);
+  const handleRef = useCallback((nextElement: TElement | null) => {
+    setElement((currentElement) =>
+      currentElement === nextElement ? currentElement : nextElement
+    );
+  }, []);
 
   useEffect(() => {
     if (!element) {
@@ -23,7 +28,7 @@ function useElementVisibility<TElement extends HTMLElement>() {
 
   return {
     isVisible,
-    ref: setElement as (element: TElement | null) => void,
+    ref: handleRef,
   };
 }
 
