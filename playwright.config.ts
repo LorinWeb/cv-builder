@@ -1,10 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
 
-import {
-  DEFAULT_RESUME_DATA_PATH,
-  RESUME_DATA_PATH_ENV_VAR,
-} from './src/data/resume-data-paths';
-
 export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
@@ -37,8 +32,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command:
-      `env ${RESUME_DATA_PATH_ENV_VAR}=${DEFAULT_RESUME_DATA_PATH} npm run build && npm run preview:visual`,
+    command: 'npm run build -- --mode test && npm run preview:visual',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,

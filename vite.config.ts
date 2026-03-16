@@ -1,11 +1,13 @@
-import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, type PluginOption } from 'vite';
 
-import { loadResumeData, resolveResumeDataPath } from './src/data/load-resume-data';
+import {
+  getResumeDataWatchPaths,
+  loadResumeData,
+} from './src/data/load-resume-data';
 import {
   getResumeRenderTarget,
   redactResumeData,
@@ -15,7 +17,6 @@ import { getDocumentTitle, getMetaDescription } from './src/helpers/seo';
 
 const RESUME_DATA_MODULE_ID = 'virtual:resume-data';
 const RESUME_DATA_MODULE_RESOLVED_ID = '\0virtual:resume-data';
-const RESUME_DATA_DIRECTORY = fileURLToPath(new URL('./src/data', import.meta.url));
 
 function escapeHtml(value: string) {
   return value
@@ -24,13 +25,8 @@ function escapeHtml(value: string) {
     .replaceAll('>', '&gt;');
 }
 
-function isResumeDataJsonFile(file: string) {
-  const relativePath = path.relative(RESUME_DATA_DIRECTORY, file);
-
-  return !relativePath.startsWith('..') && !path.isAbsolute(relativePath) && file.endsWith('.json');
-}
-
 function resumeDataPlugin(mode: string): PluginOption {
+  const watchedResumeDataPaths = getResumeDataWatchPaths();
   const getResumeSourceData = () => loadResumeData({ mode });
   const getPublicResumeData = () => redactResumeData(getResumeSourceData());
   const getSerializedResumeData = () =>
@@ -51,13 +47,15 @@ function resumeDataPlugin(mode: string): PluginOption {
       }
     },
     buildStart() {
-      this.addWatchFile(resolveResumeDataPath({ mode }));
+      for (const watchedResumeDataPath of watchedResumeDataPaths) {
+        this.addWatchFile(watchedResumeDataPath);
+      }
     },
     configureServer(server) {
-      server.watcher.add(RESUME_DATA_DIRECTORY);
+      server.watcher.add(watchedResumeDataPaths);
     },
     handleHotUpdate(context) {
-      if (!isResumeDataJsonFile(context.file)) {
+      if (!watchedResumeDataPaths.includes(context.file)) {
         return;
       }
 

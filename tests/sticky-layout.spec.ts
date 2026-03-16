@@ -22,13 +22,17 @@ async function scrollHeaderIntoStickyRange(page: Page) {
 
 async function getStickyMetrics(
   page: Page,
-  sectionTestId = 'resume-section-professional-summary'
+  sectionTestIds = ['resume-section-summary']
 ) {
-  return page.evaluate((currentSectionTestId) => {
+  return page.evaluate((currentSectionTestIds) => {
     const header = document.querySelector('[data-testid="page-header"]');
-    const title = document.querySelector(
-      `[data-testid="${currentSectionTestId}"] [data-testid="section-title"]`
-    );
+    const title = currentSectionTestIds
+      .map((currentSectionTestId) =>
+        document.querySelector(
+          `[data-testid="${currentSectionTestId}"] [data-testid="section-title"]`
+        )
+      )
+      .find((currentTitle) => currentTitle instanceof HTMLElement);
 
     if (!(header instanceof HTMLElement)) {
       throw new Error('Expected page header to be present.');
@@ -75,7 +79,7 @@ async function getStickyMetrics(
         zIndex: titleStyle.zIndex,
       },
     };
-  }, sectionTestId);
+  }, sectionTestIds);
 }
 
 async function getHeaderHorizontalBounds(page: Page) {

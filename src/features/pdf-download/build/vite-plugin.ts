@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import type { Plugin, ResolvedConfig } from 'vite';
 
-import { resolveResumeDataPath } from './index';
+import { getResumeDataWatchPaths } from '../../../data/load-resume-data';
 import { emitResumePdf } from './pipeline';
 
 function resolveViteConfigFile(config: ResolvedConfig) {
@@ -18,13 +18,14 @@ function resolveViteConfigFile(config: ResolvedConfig) {
 export function resumePdfPlugin(): Plugin {
   let resolvedConfig: ResolvedConfig | null = null;
 
-  function getResumeDataPath() {
+  function getWatchedResumeDataPaths() {
     if (!resolvedConfig) {
-      throw new Error('resumePdfPlugin must receive configResolved before resolving resume data.');
+      throw new Error(
+        'resumePdfPlugin must receive configResolved before resolving resume data.'
+      );
     }
 
-    return resolveResumeDataPath({
-      mode: resolvedConfig.mode,
+    return getResumeDataWatchPaths({
       projectRoot: resolvedConfig.root,
     });
   }
@@ -48,11 +49,11 @@ export function resumePdfPlugin(): Plugin {
       resolvedConfig = config;
     },
     async configureServer(server) {
-      server.watcher.add(getResumeDataPath());
+      server.watcher.add(getWatchedResumeDataPaths());
       await generatePdf(server.config.publicDir, 'cv-lorin-dev-pdf-build-');
     },
     async handleHotUpdate(context) {
-      if (path.resolve(context.file) !== getResumeDataPath()) {
+      if (!getWatchedResumeDataPaths().includes(context.file)) {
         return;
       }
 

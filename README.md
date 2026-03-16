@@ -1,6 +1,6 @@
 # My Resume
 
-This repo contains the code for a resume site template. It ships with public sample data by default and supports a private local JSON override so the real CV content does not need to be committed.
+This repo contains the code for a resume site template. It ships with public sample data by default and automatically switches to a private local JSON file when you create one.
 
 ## Quick Start
 
@@ -20,17 +20,11 @@ npm run preview
 
 ## Resume Data Setup
 
-By default the project loads `src/data/resume.sample.json`, so it runs out of the box with fictional sample data.
+Copy `src/data/resume.sample.json` to `src/data/resume.private.json`, then edit `src/data/resume.private.json`.
 
-To use a private local resume instead, create an untracked JSON file such as `src/data/resume.private.json` and add a `.env.local` file with:
+When `src/data/resume.private.json` exists, the app uses it automatically. Otherwise it falls back to the sample data.
 
-```bash
-RESUME_DATA_PATH=src/data/resume.private.json
-```
-
-`RESUME_DATA_PATH` is resolved relative to the repository root. The selected JSON file is validated during dev, build, and tests, and invalid or missing files fail with a clear error.
-
-When you use a private local resume file, it may include `basics.email` and `basics.phone`. The public web build strips `email` and `phone` out of the browser bundle so they are not rendered on the live page.
+Your resume data may include `basics.email` and `basics.phone`. The public web build strips `email` and `phone` out of the browser bundle so they are not rendered on the live page.
 
 ## Profile Photo Setup
 

@@ -100,13 +100,12 @@ test('builds a redacted public site and emits the generated PDF using the auto-d
   try {
     execFileSync(
       getNpmCommand(),
-      ['run', 'build'],
+      ['run', 'build', '--', '--mode', 'test'],
       {
         cwd: PROJECT_ROOT,
         env: {
           ...process.env,
           RESUME_BUILD_OUT_DIR: outputDirectory,
-          RESUME_DATA_PATH: 'tests/fixtures/resume.pdf-build.json',
           RESUME_PDF_PREVIEW_PORT: '4274',
         },
         stdio: 'pipe',
@@ -124,8 +123,8 @@ test('builds a redacted public site and emits the generated PDF using the auto-d
     expect(existsSync(generatedPdfPath)).toBeTruthy();
     expect(publicHtml).not.toContain('mailto:');
     expect(publicHtml).not.toContain('tel:');
-    expect(bundledText).not.toContain('jane.private@example.com');
-    expect(bundledText).not.toContain('+1 555-0199');
+    expect(bundledText).not.toContain('john.doe@example.com');
+    expect(bundledText).not.toContain('+1 555-0100');
     expect(bundledText).toContain(RESUME_PDF_DOWNLOAD_HREF);
   } finally {
     rmSync(outputDirectory, { force: true, recursive: true });

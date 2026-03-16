@@ -5,11 +5,8 @@ import path from 'node:path';
 import { expect, test } from '@playwright/test';
 
 import {
-  DEFAULT_RESUME_DATA_PATH,
-  LOCAL_RESUME_DATA_PATH,
-  RESUME_DATA_PATH_ENV_VAR,
-} from '../src/data/resume-data-paths';
-import {
+  PRIVATE_RESUME_DATA_PATH,
+  SAMPLE_RESUME_DATA_PATH,
   loadResumeData,
   resolveResumeDataPath,
 } from '../src/data/load-resume-data';
@@ -30,54 +27,47 @@ function writeFile(filePath: string, contents: string) {
   writeFileSync(filePath, contents);
 }
 
-function writeResumeDataEnv(envDir: string, resumeDataPath: string, fileName = '.env') {
-  writeFile(path.join(envDir, fileName), `${RESUME_DATA_PATH_ENV_VAR}=${resumeDataPath}\n`);
+function resolveProjectPath(projectRoot: string, relativePath: string) {
+  return path.join(projectRoot, relativePath);
 }
 
-function resolveEnvResumeDataPath(envDir: string, resumeDataPath: string) {
-  return path.join(envDir, resumeDataPath);
-}
-
-function withTempEnvDir(
-  callback: (envDir: string) => void,
+function withTempProjectRoot(
+  callback: (projectRoot: string) => void,
   prefix = 'resume-data-loader-'
 ) {
-  const envDir = mkdtempSync(path.join(tmpdir(), prefix));
+  const projectRoot = mkdtempSync(path.join(tmpdir(), prefix));
 
   try {
-    callback(envDir);
+    callback(projectRoot);
   } finally {
-    rmSync(envDir, { force: true, recursive: true });
+    rmSync(projectRoot, { force: true, recursive: true });
   }
 }
 
-test('loads the configured sample path from .env', async () => {
-  withTempEnvDir((envDir) => {
-    writeResumeDataEnv(envDir, DEFAULT_RESUME_DATA_PATH);
+test('loads the sample resume when the private file is absent', async () => {
+  withTempProjectRoot((projectRoot) => {
     writeFile(
-      resolveEnvResumeDataPath(envDir, DEFAULT_RESUME_DATA_PATH),
+      resolveProjectPath(projectRoot, SAMPLE_RESUME_DATA_PATH),
       JSON.stringify(MINIMAL_RESUME_DATA, null, 2)
     );
 
-    const resumeData = loadResumeData({ envDir, mode: 'test', useProcessEnv: false });
+    const resumeData = loadResumeData({ mode: 'development', projectRoot });
 
     expect(resumeData.basics.name).toBe('John Doe');
-    expect(resolveResumeDataPath({ envDir, mode: 'test', useProcessEnv: false })).toBe(
-      resolveEnvResumeDataPath(envDir, DEFAULT_RESUME_DATA_PATH)
+    expect(resolveResumeDataPath({ mode: 'development', projectRoot })).toBe(
+      resolveProjectPath(projectRoot, SAMPLE_RESUME_DATA_PATH)
     );
   });
 });
 
-test('prefers .env.local over .env when both define RESUME_DATA_PATH', async () => {
-  withTempEnvDir((envDir) => {
-    writeResumeDataEnv(envDir, DEFAULT_RESUME_DATA_PATH);
-    writeResumeDataEnv(envDir, LOCAL_RESUME_DATA_PATH, '.env.local');
+test('prefers the private resume when it exists', async () => {
+  withTempProjectRoot((projectRoot) => {
     writeFile(
-      resolveEnvResumeDataPath(envDir, DEFAULT_RESUME_DATA_PATH),
+      resolveProjectPath(projectRoot, SAMPLE_RESUME_DATA_PATH),
       JSON.stringify(MINIMAL_RESUME_DATA, null, 2)
     );
     writeFile(
-      resolveEnvResumeDataPath(envDir, LOCAL_RESUME_DATA_PATH),
+      resolveProjectPath(projectRoot, PRIVATE_RESUME_DATA_PATH),
       JSON.stringify(
         {
           basics: {
@@ -90,17 +80,48 @@ test('prefers .env.local over .env when both define RESUME_DATA_PATH', async () 
       )
     );
 
-    const resumeData = loadResumeData({ envDir, mode: 'test', useProcessEnv: false });
+    const resumeData = loadResumeData({ mode: 'development', projectRoot });
 
     expect(resumeData.basics.name).toBe('Private Doe');
+    expect(resolveResumeDataPath({ mode: 'development', projectRoot })).toBe(
+      resolveProjectPath(projectRoot, PRIVATE_RESUME_DATA_PATH)
+    );
+  });
+});
+
+test('uses the sample resume in test mode even when a private file exists', async () => {
+  withTempProjectRoot((projectRoot) => {
+    writeFile(
+      resolveProjectPath(projectRoot, SAMPLE_RESUME_DATA_PATH),
+      JSON.stringify(MINIMAL_RESUME_DATA, null, 2)
+    );
+    writeFile(
+      resolveProjectPath(projectRoot, PRIVATE_RESUME_DATA_PATH),
+      JSON.stringify(
+        {
+          basics: {
+            ...MINIMAL_RESUME_DATA.basics,
+            name: 'Private Doe',
+          },
+        },
+        null,
+        2
+      )
+    );
+
+    const resumeData = loadResumeData({ mode: 'test', projectRoot });
+
+    expect(resumeData.basics.name).toBe('John Doe');
+    expect(resolveResumeDataPath({ mode: 'test', projectRoot })).toBe(
+      resolveProjectPath(projectRoot, SAMPLE_RESUME_DATA_PATH)
+    );
   });
 });
 
 test('loads a configured local public profile photo path when the file exists', async () => {
-  withTempEnvDir((envDir) => {
-    writeResumeDataEnv(envDir, DEFAULT_RESUME_DATA_PATH);
+  withTempProjectRoot((projectRoot) => {
     writeFile(
-      resolveEnvResumeDataPath(envDir, DEFAULT_RESUME_DATA_PATH),
+      resolveProjectPath(projectRoot, SAMPLE_RESUME_DATA_PATH),
       JSON.stringify(
         {
           basics: {
@@ -114,23 +135,22 @@ test('loads a configured local public profile photo path when the file exists', 
         2
       )
     );
-    writeFile(path.join(envDir, 'public/static/profile.jpg'), 'placeholder image file');
+    writeFile(path.join(projectRoot, 'public/static/profile.jpg'), 'placeholder image file');
 
-    const resumeData = loadResumeData({ envDir, mode: 'test', useProcessEnv: false });
+    const resumeData = loadResumeData({ mode: 'development', projectRoot });
 
     expect(resumeData.basics.photo?.src).toBe('/static/profile.jpg');
   });
 });
 
 test('redacts private contact details from the public resume payload', async () => {
-  withTempEnvDir((envDir) => {
-    writeResumeDataEnv(envDir, DEFAULT_RESUME_DATA_PATH);
+  withTempProjectRoot((projectRoot) => {
     writeFile(
-      resolveEnvResumeDataPath(envDir, DEFAULT_RESUME_DATA_PATH),
+      resolveProjectPath(projectRoot, SAMPLE_RESUME_DATA_PATH),
       JSON.stringify(MINIMAL_RESUME_DATA, null, 2)
     );
 
-    const resumeData = loadResumeData({ envDir, mode: 'test', useProcessEnv: false });
+    const resumeData = loadResumeData({ mode: 'development', projectRoot });
     const publicResumeData = redactResumeData(resumeData);
 
     expect('email' in publicResumeData.basics).toBeFalsy();
@@ -139,21 +159,32 @@ test('redacts private contact details from the public resume payload', async () 
   });
 });
 
-test('throws a clear error when the configured JSON file is missing', async () => {
-  withTempEnvDir((envDir) => {
-    writeFile(path.join(envDir, '.env'), 'RESUME_DATA_PATH=src/data/missing.json\n');
-
+test('throws a clear error when the sample resume file is missing', async () => {
+  withTempProjectRoot((projectRoot) => {
     expect(() =>
-      loadResumeData({ envDir, mode: 'test', useProcessEnv: false })
+      loadResumeData({ mode: 'development', projectRoot })
     ).toThrow(/was not found/);
   });
 });
 
-test('throws a clear error when a configured local public profile photo file is missing', async () => {
-  withTempEnvDir((envDir) => {
-    writeResumeDataEnv(envDir, DEFAULT_RESUME_DATA_PATH);
+test('throws a clear error when the private resume file is not valid JSON', async () => {
+  withTempProjectRoot((projectRoot) => {
     writeFile(
-      resolveEnvResumeDataPath(envDir, DEFAULT_RESUME_DATA_PATH),
+      resolveProjectPath(projectRoot, SAMPLE_RESUME_DATA_PATH),
+      JSON.stringify(MINIMAL_RESUME_DATA, null, 2)
+    );
+    writeFile(resolveProjectPath(projectRoot, PRIVATE_RESUME_DATA_PATH), '{ invalid json');
+
+    expect(() =>
+      loadResumeData({ mode: 'development', projectRoot })
+    ).toThrow(/resume\.private\.json.*not valid JSON/);
+  });
+});
+
+test('throws a clear error when a configured local public profile photo file is missing', async () => {
+  withTempProjectRoot((projectRoot) => {
+    writeFile(
+      resolveProjectPath(projectRoot, SAMPLE_RESUME_DATA_PATH),
       JSON.stringify(
         {
           basics: {
@@ -169,32 +200,30 @@ test('throws a clear error when a configured local public profile photo file is 
     );
 
     expect(() =>
-      loadResumeData({ envDir, mode: 'test', useProcessEnv: false })
+      loadResumeData({ mode: 'development', projectRoot })
     ).toThrow(/Resume photo file was not found/);
   });
 });
 
 test('throws a clear error when the configured file is not valid JSON', async () => {
-  withTempEnvDir((envDir) => {
-    writeResumeDataEnv(envDir, DEFAULT_RESUME_DATA_PATH);
-    writeFile(resolveEnvResumeDataPath(envDir, DEFAULT_RESUME_DATA_PATH), '{ invalid json');
+  withTempProjectRoot((projectRoot) => {
+    writeFile(resolveProjectPath(projectRoot, SAMPLE_RESUME_DATA_PATH), '{ invalid json');
 
     expect(() =>
-      loadResumeData({ envDir, mode: 'test', useProcessEnv: false })
+      loadResumeData({ mode: 'development', projectRoot })
     ).toThrow(/not valid JSON/);
   });
 });
 
 test('throws a clear error when the configured JSON fails schema validation', async () => {
-  withTempEnvDir((envDir) => {
-    writeResumeDataEnv(envDir, DEFAULT_RESUME_DATA_PATH);
+  withTempProjectRoot((projectRoot) => {
     writeFile(
-      resolveEnvResumeDataPath(envDir, DEFAULT_RESUME_DATA_PATH),
+      resolveProjectPath(projectRoot, SAMPLE_RESUME_DATA_PATH),
       JSON.stringify({ basics: { name: 'Broken Doe' } }, null, 2)
     );
 
     expect(() =>
-      loadResumeData({ envDir, mode: 'test', useProcessEnv: false })
+      loadResumeData({ mode: 'development', projectRoot })
     ).toThrow(/failed validation/);
   });
 });

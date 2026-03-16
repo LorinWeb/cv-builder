@@ -61,7 +61,7 @@ function App({ data }: AppProps) {
 
         <Page.Body>
           <Page.MainContent>
-            <ResumeSection title="Professional Summary">
+            <ResumeSection title="Summary">
               {profileData.summary}
             </ResumeSection>
 

@@ -1,25 +1,21 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import {
-  readResumeSourceDataJson,
-  resolveResumeDataConfig,
-  resolveResumeDataPath as resolveResumeDataPathFromBuildHelpers,
-} from '../features/pdf-download/build';
 import { parseResumeData } from './resume-schema';
 import type { ResumeSourceData } from './types/resume';
 
 interface ResumeDataLoadOptions {
-  envDir?: string;
   mode?: string;
-  processEnv?: NodeJS.ProcessEnv;
   projectRoot?: string;
-  useProcessEnv?: boolean;
 }
+
+export const SAMPLE_RESUME_DATA_PATH = 'src/data/resume.sample.json';
+export const PRIVATE_RESUME_DATA_PATH = 'src/data/resume.private.json';
 
 const PROJECT_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const PUBLIC_ASSET_PREFIX = '/static/';
+const TEST_MODE = 'test';
 
 function isLocalPublicAssetPath(assetPath: string) {
   return assetPath.startsWith(PUBLIC_ASSET_PREFIX);
@@ -27,6 +23,17 @@ function isLocalPublicAssetPath(assetPath: string) {
 
 function resolveLocalPublicAssetPath(assetPath: string, projectRoot: string) {
   return path.resolve(projectRoot, 'public', assetPath.replace(/^\//, ''));
+}
+
+function resolveProjectPath(projectRoot: string, relativePath: string) {
+  return path.resolve(projectRoot, relativePath);
+}
+
+function resolveResumeCandidatePaths(projectRoot: string) {
+  return {
+    privatePath: resolveProjectPath(projectRoot, PRIVATE_RESUME_DATA_PATH),
+    samplePath: resolveProjectPath(projectRoot, SAMPLE_RESUME_DATA_PATH),
+  };
 }
 
 function validateResumePhotoAsset(data: ResumeSourceData, projectRoot: string) {
@@ -47,30 +54,64 @@ function validateResumePhotoAsset(data: ResumeSourceData, projectRoot: string) {
   );
 }
 
+function readResumeSourceDataJson(options: ResumeDataLoadOptions = {}) {
+  const resolvedPath = resolveResumeDataPath(options);
+
+  try {
+    return {
+      data: JSON.parse(readFileSync(resolvedPath, 'utf8')) as unknown,
+      resolvedPath,
+    };
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error(`Resume data file at ${resolvedPath} is not valid JSON.`, {
+        cause: error,
+      });
+    }
+
+    throw new Error(
+      `Resume data file was not found at ${resolvedPath}. Create ${PRIVATE_RESUME_DATA_PATH} by copying ${SAMPLE_RESUME_DATA_PATH}, or restore the sample resume data file.`,
+      {
+        cause: error,
+      }
+    );
+  }
+}
+
+export function getResumeDataWatchPaths({
+  projectRoot = PROJECT_ROOT,
+}: Pick<ResumeDataLoadOptions, 'projectRoot'> = {}) {
+  const { privatePath, samplePath } = resolveResumeCandidatePaths(projectRoot);
+
+  return [samplePath, privatePath];
+}
+
 export function resolveResumeDataPath(options: ResumeDataLoadOptions = {}) {
-  return resolveResumeDataPathFromBuildHelpers({
-    ...options,
-    projectRoot: options.projectRoot ?? PROJECT_ROOT,
-  });
+  const projectRoot = options.projectRoot ?? PROJECT_ROOT;
+  const { privatePath, samplePath } = resolveResumeCandidatePaths(projectRoot);
+
+  if (options.mode === TEST_MODE) {
+    return samplePath;
+  }
+
+  return existsSync(privatePath) ? privatePath : samplePath;
 }
 
 export function loadResumeData(options: ResumeDataLoadOptions = {}): ResumeSourceData {
-  const { resolvedEnvDir } = resolveResumeDataConfig({
-    ...options,
-    projectRoot: options.projectRoot ?? PROJECT_ROOT,
-  });
+  const projectRoot = options.projectRoot ?? PROJECT_ROOT;
   const resolvedPath = resolveResumeDataPath({
     ...options,
+    projectRoot,
   });
   const { data: parsedJson } = readResumeSourceDataJson({
     ...options,
-    projectRoot: options.projectRoot ?? PROJECT_ROOT,
+    projectRoot,
   });
 
   try {
     const resumeData = parseResumeData(parsedJson);
 
-    validateResumePhotoAsset(resumeData, resolvedEnvDir);
+    validateResumePhotoAsset(resumeData, projectRoot);
 
     return resumeData;
   } catch (error) {
