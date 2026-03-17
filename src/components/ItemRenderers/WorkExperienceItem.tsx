@@ -1,7 +1,8 @@
 import { formatDateRangeWithDuration } from '../../helpers/date-range';
 import { joinClassNames } from '../../helpers/classNames';
+import { ResumeMarkdown } from '../../helpers/resume-markdown';
 import { getPrintClassNames } from '../../helpers/print';
-import { getTextValue } from '../../helpers/text-value';
+import { getTextValueSource } from '../../helpers/text-value';
 import type {
   ResumeWorkEntry,
   ResumeWorkGroup,
@@ -49,7 +50,9 @@ function renderHighlights(highlights?: TextValue[]) {
     <div data-testid="work-experience-highlights">
       <ul className="mt-0 list-square pl-5 font-light leading-[1.3em]">
         {highlights.map((highlight, index) => (
-          <li key={index}>{getTextValue(highlight)}</li>
+          <li key={index}>
+            <ResumeMarkdown markdown={getTextValueSource(highlight)} mode="inline" />
+          </li>
         ))}
       </ul>
     </div>
@@ -74,7 +77,11 @@ function renderSingleWorkItem(item: ResumeWorkEntry, className?: string) {
       <p className="my-[0.5em] mt-0 block text-[0.85em]">
         {formatDateRangeWithDuration(startDate, endDate)}
       </p>
-      <p className="my-[0.5em] mb-0 leading-[1.3em]">{summary}</p>
+      <ResumeMarkdown
+        className="my-[0.5em] mb-0 leading-[1.3em]"
+        markdown={summary}
+        mode="block"
+      />
       {renderHighlights(highlights)}
     </article>
   );
@@ -93,9 +100,11 @@ function renderProgressionEntry(entry: ResumeWorkEntry) {
       <p className="my-[0.5em] mt-0 block text-[0.85em]">
         {formatDateRangeWithDuration(entry.startDate, entry.endDate)}
       </p>
-      <p className="my-[0.5em] mb-0 leading-[1.3em]">
-        {entry.summary}
-      </p>
+      <ResumeMarkdown
+        className="my-[0.5em] mb-0 leading-[1.3em]"
+        markdown={entry.summary}
+        mode="block"
+      />
       {renderHighlights(entry.highlights)}
     </article>
   );

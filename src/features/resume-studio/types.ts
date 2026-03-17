@@ -2,7 +2,7 @@ import type { PrintConfig, ResumeSourceData } from '../../data/types/resume';
 
 export type ResumeStudioSource = 'private' | 'sample';
 export type ResumeStudioStepId = 'basics' | 'contacts' | 'achievements' | 'experience' | 'skills' | 'education';
-export type ResumeStudioWarningCode = 'unsupported-work-progression';
+export type ResumeStudioWarningCode = string;
 
 export interface ResumeStudioTextDraft extends PrintConfig {
   text: string;
@@ -28,7 +28,8 @@ export interface ResumeStudioBasicsDraft {
   city: string;
 }
 
-export interface ResumeStudioWorkDraft extends PrintConfig {
+export interface ResumeStudioStandaloneWorkDraft extends PrintConfig {
+  kind: 'role';
   company: string;
   endDate: string;
   highlights: ResumeStudioTextDraft[];
@@ -38,6 +39,27 @@ export interface ResumeStudioWorkDraft extends PrintConfig {
   summary: string;
   website: string;
 }
+
+export interface ResumeStudioProgressionRoleDraft extends PrintConfig {
+  company: string;
+  endDate: string;
+  highlights: ResumeStudioTextDraft[];
+  isContract: boolean;
+  position: string;
+  startDate: string;
+  summary: string;
+}
+
+export interface ResumeStudioProgressionGroupDraft extends PrintConfig {
+  company: string;
+  kind: 'group';
+  progression: ResumeStudioProgressionRoleDraft[];
+  website: string;
+}
+
+export type ResumeStudioWorkDraft =
+  | ResumeStudioStandaloneWorkDraft
+  | ResumeStudioProgressionGroupDraft;
 
 export interface ResumeStudioSkillDraft extends PrintConfig {
   keywords: ResumeStudioTextDraft[];

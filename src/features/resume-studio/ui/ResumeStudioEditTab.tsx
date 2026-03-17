@@ -1,5 +1,5 @@
 import { RESUME_STUDIO_STEP_ORDER } from '../constants';
-import type { ResumeStudioStepId, ResumeStudioWarning } from '../types';
+import type { ResumeStudioStepId } from '../types';
 import { ResumeStudioAchievementsStep } from './steps/ResumeStudioAchievementsStep';
 import { ResumeStudioBasicsStep } from './steps/ResumeStudioBasicsStep';
 import { ResumeStudioContactsStep } from './steps/ResumeStudioContactsStep';
@@ -12,7 +12,6 @@ interface ResumeStudioEditTabProps {
   isUploadingPhoto: boolean;
   onStepChange: (step: ResumeStudioStepId) => void;
   onUploadPhoto: (file: File) => Promise<void>;
-  warnings: ResumeStudioWarning[];
 }
 
 const STEP_LABELS: Record<ResumeStudioStepId, string> = {
@@ -29,10 +28,7 @@ export function ResumeStudioEditTab({
   isUploadingPhoto,
   onStepChange,
   onUploadPhoto,
-  warnings,
 }: ResumeStudioEditTabProps) {
-  const workWarning = warnings.find((warning) => warning.step === 'experience');
-
   function renderCurrentStep() {
     switch (currentStep) {
       case 'basics':
@@ -47,12 +43,7 @@ export function ResumeStudioEditTab({
       case 'achievements':
         return <ResumeStudioAchievementsStep />;
       case 'experience':
-        return (
-          <ResumeStudioExperienceStep
-            isReadOnly={Boolean(workWarning)}
-            warningMessage={workWarning?.message}
-          />
-        );
+        return <ResumeStudioExperienceStep />;
       case 'skills':
         return <ResumeStudioSkillsStep />;
       case 'education':

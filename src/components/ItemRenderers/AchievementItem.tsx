@@ -1,5 +1,6 @@
 import type { TextValue } from '../../data/types/resume';
-import { getTextValue } from '../../helpers/text-value';
+import { ResumeMarkdown } from '../../helpers/resume-markdown';
+import { getTextValueSource } from '../../helpers/text-value';
 
 interface AchievementItemProps {
   className?: string;
@@ -9,7 +10,7 @@ interface AchievementItemProps {
 function AchievementItem({ className, item }: AchievementItemProps) {
   return (
     <li data-testid="achievement-item" className={className || undefined}>
-      {getTextValue(item)}
+      <ResumeMarkdown markdown={getTextValueSource(item)} mode="inline" />
     </li>
   );
 }

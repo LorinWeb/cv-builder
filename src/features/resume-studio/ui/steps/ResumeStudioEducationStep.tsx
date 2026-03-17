@@ -1,6 +1,6 @@
 import { useFieldArray, useFormContext } from 'react-hook-form';
 
-import { ResumeStudioTextListEditor } from '../ResumeStudioTextListEditor';
+import { ListItemsEditor } from '../ListItemsEditor';
 import { ResumeStudioInputField, ResumeStudioSectionCard } from '../form-fields';
 import type { ResumeStudioDraft } from '../../types';
 
@@ -52,9 +52,10 @@ export function ResumeStudioEducationStep() {
               />
             </div>
             <div className="mt-4">
-              <ResumeStudioTextListEditor
+              <ListItemsEditor
                 addLabel="Add course"
                 emptyCopy="List optional standout modules or focus areas."
+                itemLabel="course"
                 label="Courses"
                 name={`education.${index}.courses`}
                 placeholder="Algorithms, distributed systems, HCI, or design research."

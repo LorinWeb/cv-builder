@@ -1,5 +1,6 @@
 import type { SkillCategory } from '../../data/types/resume';
-import { getTextValue } from '../../helpers/text-value';
+import { ResumeMarkdown } from '../../helpers/resume-markdown';
+import { getTextValueSource } from '../../helpers/text-value';
 
 interface SkillCategoryItemProps {
   className?: string;
@@ -15,7 +16,7 @@ function SkillCategoryItem({ className, item }: SkillCategoryItemProps) {
       <ul className="mb-2.5 mt-0 list-square pl-5">
         {item.keywords.map((keyword, index) => (
           <li key={index} className="font-light leading-[1.4em]">
-            {getTextValue(keyword)}
+            <ResumeMarkdown markdown={getTextValueSource(keyword)} mode="inline" />
           </li>
         ))}
       </ul>

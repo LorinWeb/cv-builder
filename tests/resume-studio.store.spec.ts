@@ -19,6 +19,36 @@ const MINIMAL_RESUME = {
   },
 };
 
+const GROUPED_WORK_RESUME = {
+  basics: {
+    label: 'Template Engineer',
+    name: 'John Doe',
+    summary: 'Template summary',
+  },
+  work: [
+    {
+      company: 'Placeholder Labs',
+      progression: [
+        {
+          company: 'Placeholder Labs',
+          position: 'Lead Product Engineer',
+          startDate: '2018-05-01',
+          endDate: '2019-12-20',
+          summary: 'Led a platform refresh.',
+        },
+        {
+          company: 'Placeholder Labs',
+          position: 'Senior Software Engineer',
+          startDate: '2016-06-01',
+          endDate: '2018-04-30',
+          summary: 'Delivered product work.',
+        },
+      ],
+      website: 'https://example.com/placeholder-labs',
+    },
+  ],
+};
+
 function withTempProject(callback: (projectRoot: string) => void) {
   const projectRoot = createTempProjectRoot('resume-studio-store-');
 
@@ -193,6 +223,135 @@ test('preserves unsupported sections when saving, versioning, and switching', as
     ) as { languages?: Array<{ name: string }> };
 
     expect(savedFile.languages?.[0]?.name).toBe('English');
+
+    store.close();
+  });
+});
+
+test('imports grouped work and preserves it across saves and version switches', async () => {
+  withTempProject((projectRoot) => {
+    writeProjectFile(
+      projectRoot,
+      'src/data/resume.private.json',
+      JSON.stringify(GROUPED_WORK_RESUME, null, 2)
+    );
+
+    const store = createResumeStudioStore(projectRoot);
+    const importedState = store.getState();
+
+    expect(importedState.warnings).toEqual([]);
+    expect(importedState.draft?.work?.[0]).toMatchObject({
+      company: 'Placeholder Labs',
+      progression: [
+        {
+          position: 'Lead Product Engineer',
+        },
+        {
+          position: 'Senior Software Engineer',
+        },
+      ],
+    });
+
+    const versionedState = store.createVersion('Grouped CV');
+    const activeWorkItem = versionedState.draft?.work?.[0];
+
+    expect(activeWorkItem).toBeDefined();
+    expect(activeWorkItem && 'progression' in activeWorkItem).toBeTruthy();
+
+    const updatedState = store.saveDraft({
+      ...versionedState.draft!,
+      work: [
+        {
+          ...(activeWorkItem as typeof GROUPED_WORK_RESUME.work[number]),
+          company: 'Placeholder Labs Europe',
+          progression: activeWorkItem && 'progression' in activeWorkItem
+            ? activeWorkItem.progression.map((entry, index) =>
+                index === 0
+                  ? {
+                      ...entry,
+                      company: 'Placeholder Labs Europe',
+                      position: 'Principal Product Engineer',
+                    }
+                  : entry
+              )
+            : [],
+        },
+      ],
+    });
+
+    const updatedWorkItem = updatedState.draft?.work?.[0];
+
+    expect(updatedWorkItem).toBeDefined();
+    expect(updatedWorkItem && 'progression' in updatedWorkItem).toBeTruthy();
+    expect(updatedWorkItem && 'progression' in updatedWorkItem && updatedWorkItem.company).toBe(
+      'Placeholder Labs Europe'
+    );
+    expect(
+      updatedWorkItem && 'progression' in updatedWorkItem
+        ? updatedWorkItem.progression[0]
+        : null
+    ).toMatchObject({
+      company: 'Placeholder Labs Europe',
+      position: 'Principal Product Engineer',
+    });
+
+    const importedVersionId = store
+      .getState()
+      .versions.find(
+        (version) => version.name === RESUME_STUDIO_DEFAULT_IMPORTED_VERSION_NAME
+      )!.id;
+    const originalVersionState = store.selectVersion(importedVersionId);
+
+    const originalWorkItem = originalVersionState.draft?.work?.[0];
+
+    expect(originalWorkItem).toBeDefined();
+    expect(originalWorkItem && 'progression' in originalWorkItem).toBeTruthy();
+    expect(originalWorkItem && 'progression' in originalWorkItem && originalWorkItem.company).toBe(
+      'Placeholder Labs'
+    );
+    expect(
+      originalWorkItem && 'progression' in originalWorkItem
+        ? originalWorkItem.progression[0]
+        : null
+    ).toMatchObject({
+      position: 'Lead Product Engineer',
+    });
+
+    const groupedVersionState = store.selectVersion(updatedState.activeVersionId!);
+    const savedFile = JSON.parse(
+      readFileSync(path.join(projectRoot, 'src/data/resume.private.json'), 'utf8')
+    ) as typeof GROUPED_WORK_RESUME;
+
+    const groupedWorkItem = groupedVersionState.draft?.work?.[0];
+
+    expect(groupedWorkItem).toBeDefined();
+    expect(groupedWorkItem && 'progression' in groupedWorkItem).toBeTruthy();
+    expect(groupedWorkItem && 'progression' in groupedWorkItem && groupedWorkItem.company).toBe(
+      'Placeholder Labs Europe'
+    );
+    expect(
+      groupedWorkItem && 'progression' in groupedWorkItem
+        ? groupedWorkItem.progression[0]
+        : null
+    ).toMatchObject({
+      position: 'Principal Product Engineer',
+    });
+
+    const savedWorkItem = savedFile.work?.[0];
+
+    expect(savedWorkItem).toBeDefined();
+    expect(savedWorkItem && 'progression' in savedWorkItem).toBeTruthy();
+    expect(savedWorkItem && 'progression' in savedWorkItem && savedWorkItem.company).toBe(
+      'Placeholder Labs Europe'
+    );
+    expect(
+      savedWorkItem && 'progression' in savedWorkItem
+        ? savedWorkItem.progression[0]
+        : null
+    ).toMatchObject({
+      company: 'Placeholder Labs Europe',
+      position: 'Principal Product Engineer',
+    });
 
     store.close();
   });

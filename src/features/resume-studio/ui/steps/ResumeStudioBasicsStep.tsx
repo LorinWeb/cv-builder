@@ -1,7 +1,8 @@
 import type { ChangeEvent } from 'react';
 import { useFormContext } from 'react-hook-form';
 
-import { ResumeStudioInputField, ResumeStudioSectionCard, ResumeStudioTextAreaField } from '../form-fields';
+import { TextEditor } from '../TextEditor';
+import { ResumeStudioInputField, ResumeStudioSectionCard } from '../form-fields';
 import type { ResumeStudioDraft } from '../../types';
 
 interface ResumeStudioBasicsStepProps {
@@ -62,11 +63,12 @@ export function ResumeStudioBasicsStep({
             placeholder="Staff Engineer"
           />
         </div>
-        <ResumeStudioTextAreaField
+        <TextEditor
+          description="Markdown supported."
           label="Summary"
+          minRows={5}
           name="basics.summary"
           placeholder="Explain your strengths, scope, and the kind of work you want next."
-          rows={5}
           testId="resume-studio-field-basics-summary"
         />
       </ResumeStudioSectionCard>

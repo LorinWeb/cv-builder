@@ -1,18 +1,23 @@
 import type {
   EducationItem,
   ResumeSourceData,
+  ResumeWorkGroup,
   ResumeWorkEntry,
+  ResumeWorkItem,
   SkillCategory,
   TextValue,
 } from '../../data/types/resume';
-import { isResumeStudioWorkEditable } from './compatibility';
 import type {
   ResumeStudioDraft,
   ResumeStudioEducationDraft,
+  ResumeStudioProgressionGroupDraft,
+  ResumeStudioProgressionRoleDraft,
   ResumeStudioSkillDraft,
   ResumeStudioTextDraft,
+  ResumeStudioStandaloneWorkDraft,
   ResumeStudioWorkDraft,
 } from './types';
+import { isResumeStudioProgressionGroupDraft } from './work-draft';
 
 function getResumeStudioPhotoAlt(name: string | undefined) {
   const trimmedName = name?.trim() || '';
@@ -40,7 +45,25 @@ function fromTextDraft(value: ResumeStudioTextDraft): TextValue {
   };
 }
 
-function toWorkDraft(value: ResumeWorkEntry): ResumeStudioWorkDraft {
+function toStandaloneWorkDraft(value: ResumeWorkEntry): ResumeStudioStandaloneWorkDraft {
+  return {
+    avoidPageBreakInside: value.avoidPageBreakInside,
+    company: value.company,
+    endDate: value.endDate || '',
+    highlights: (value.highlights || []).map(toTextDraft),
+    isContract: Boolean(value.isContract),
+    kind: 'role',
+    position: value.position,
+    printBreakBefore: value.printBreakBefore,
+    startDate: value.startDate,
+    summary: value.summary,
+    website: value.website || '',
+  };
+}
+
+function toProgressionRoleDraft(
+  value: ResumeWorkEntry
+): ResumeStudioProgressionRoleDraft {
   return {
     avoidPageBreakInside: value.avoidPageBreakInside,
     company: value.company,
@@ -51,8 +74,28 @@ function toWorkDraft(value: ResumeWorkEntry): ResumeStudioWorkDraft {
     printBreakBefore: value.printBreakBefore,
     startDate: value.startDate,
     summary: value.summary,
+  };
+}
+
+function toGroupedWorkDraft(
+  value: ResumeWorkGroup
+): ResumeStudioProgressionGroupDraft {
+  return {
+    avoidPageBreakInside: value.avoidPageBreakInside,
+    company: value.company || '',
+    kind: 'group',
+    printBreakBefore: value.printBreakBefore,
+    progression: value.progression.map(toProgressionRoleDraft),
     website: value.website || '',
   };
+}
+
+function toWorkDraft(value: ResumeWorkItem): ResumeStudioWorkDraft {
+  if ('progression' in value) {
+    return toGroupedWorkDraft(value);
+  }
+
+  return toStandaloneWorkDraft(value);
 }
 
 function toSkillDraft(value: SkillCategory): ResumeStudioSkillDraft {
@@ -100,11 +143,7 @@ export function toResumeStudioDraft(data: ResumeSourceData): ResumeStudioDraft {
     education: (data.education || []).map(toEducationDraft),
     impact: (data.basics.impact || []).map(toTextDraft),
     skills: (data.skills || []).map(toSkillDraft),
-    work: isResumeStudioWorkEditable(data)
-      ? (data.work || [])
-          .filter((item): item is ResumeWorkEntry => !('progression' in item))
-          .map(toWorkDraft)
-      : [],
+    work: (data.work || []).map(toWorkDraft),
   };
 }
 
@@ -181,29 +220,49 @@ function applyEducation(
 }
 
 function applyWork(
-  source: ResumeSourceData,
   draft: ResumeStudioDraft
 ): ResumeSourceData['work'] {
-  if (!isResumeStudioWorkEditable(source)) {
-    return source.work;
-  }
-
   if (draft.work.length === 0) {
     return undefined;
   }
 
-  return draft.work.map((item) => ({
-    avoidPageBreakInside: item.avoidPageBreakInside,
-    company: item.company,
-    endDate: item.endDate || undefined,
-    highlights: item.highlights.length > 0 ? item.highlights.map(fromTextDraft) : undefined,
-    isContract: item.isContract || undefined,
-    position: item.position,
-    printBreakBefore: item.printBreakBefore,
-    startDate: item.startDate,
-    summary: item.summary,
-    website: item.website || undefined,
-  }));
+  return draft.work.map((item) => {
+    if (isResumeStudioProgressionGroupDraft(item)) {
+      const groupCompany = item.company.trim();
+
+      return {
+        avoidPageBreakInside: item.avoidPageBreakInside,
+        company: groupCompany || undefined,
+        printBreakBefore: item.printBreakBefore,
+        progression: item.progression.map((entry) => ({
+          avoidPageBreakInside: entry.avoidPageBreakInside,
+          company: groupCompany || entry.company,
+          endDate: entry.endDate || undefined,
+          highlights:
+            entry.highlights.length > 0 ? entry.highlights.map(fromTextDraft) : undefined,
+          isContract: entry.isContract || undefined,
+          position: entry.position,
+          printBreakBefore: entry.printBreakBefore,
+          startDate: entry.startDate,
+          summary: entry.summary,
+        })),
+        website: item.website || undefined,
+      };
+    }
+
+    return {
+      avoidPageBreakInside: item.avoidPageBreakInside,
+      company: item.company,
+      endDate: item.endDate || undefined,
+      highlights: item.highlights.length > 0 ? item.highlights.map(fromTextDraft) : undefined,
+      isContract: item.isContract || undefined,
+      position: item.position,
+      printBreakBefore: item.printBreakBefore,
+      startDate: item.startDate,
+      summary: item.summary,
+      website: item.website || undefined,
+    };
+  });
 }
 
 export function applyResumeStudioDraft(
@@ -215,6 +274,6 @@ export function applyResumeStudioDraft(
     basics: applyBasics(source, draft),
     education: applyEducation(draft.education),
     skills: applySkills(draft.skills),
-    work: applyWork(source, draft),
+    work: applyWork(draft),
   };
 }

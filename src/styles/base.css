@@ -1,6 +1,8 @@
 :root {
   --color-primary: #018741;
   --color-secondary: #4a7f7a;
+  --color-tertiary: #004cb7;
+  --color-accent: #b74900;
   --color-header-border: rgb(150.2144 193.9856 190.0064);
   --color-main-border: rgb(137.3216 186.4784 182.0096);
 }
@@ -71,4 +73,12 @@ textarea {
   font-size: 100%;
   line-height: 1.15;
   margin: 0;
+}
+
+.resume-studio-editor-shell[data-toolbar-visible='false'] .resume-studio-editor-toolbar {
+  display: none !important;
+}
+
+.resume-studio-editor-shell[data-toolbar-visible='true'] .resume-studio-editor-toolbar {
+  display: flex !important;
 }

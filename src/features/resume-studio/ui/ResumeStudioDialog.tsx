@@ -410,7 +410,6 @@ export function ResumeStudioDialog({
                       isUploadingPhoto={isUploadingPhoto}
                       onStepChange={setCurrentStep}
                       onUploadPhoto={handleUploadPhoto}
-                      warnings={state.warnings}
                     />
                   </FormProvider>
                 ) : (

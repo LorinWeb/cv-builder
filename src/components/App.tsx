@@ -7,6 +7,7 @@ import WorkExperienceItem from './ItemRenderers/WorkExperienceItem';
 import ProfileSection from './ProfileSection';
 import ResumeSection from './ResumeSection';
 import { joinClassNames } from '../helpers/classNames';
+import { ResumeMarkdown } from '../helpers/resume-markdown';
 import { ResumeStudioLauncher } from '../features/resume-studio';
 import useElementVisibility from '../hooks/useElementVisibility';
 import type { ResumeRuntimeData, ResumeWorkItem } from '../data/types/resume';
@@ -98,7 +99,11 @@ function App({ data, isResumeStudioPreview = false }: AppProps) {
 
           {hasSideColumn && (
             <Page.Sidebar placement="right">
-              {summary ? <ResumeSection title="Summary">{summary}</ResumeSection> : null}
+              {summary ? (
+                <ResumeSection title="Summary">
+                  <ResumeMarkdown markdown={summary} mode="block" />
+                </ResumeSection>
+              ) : null}
 
               {skillsData.length > 0 && (
                 <ResumeSection className="text-left" items={skillsData} title="Skills">

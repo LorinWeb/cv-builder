@@ -1,4 +1,5 @@
 import type { ResumeData, ResumeSourceData } from '../data/types/resume';
+import { stripMarkdownToPlainText } from './markdown';
 
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
@@ -33,7 +34,7 @@ export function getMetaDescription(
     );
   }
 
-  const summary = normalizeWhitespace(rawSummary);
+  const summary = normalizeWhitespace(stripMarkdownToPlainText(rawSummary));
 
   if (!summary) {
     throw new Error(
