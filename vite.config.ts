@@ -20,6 +20,12 @@ import { getDocumentTitle, getMetaDescription } from './src/helpers/seo';
 
 const RESUME_DATA_MODULE_ID = 'virtual:resume-data';
 const RESUME_DATA_MODULE_RESOLVED_ID = '\0virtual:resume-data';
+const MANUAL_CHUNK_RULES = [
+  ['react-vendor', ['react', 'react-dom']],
+  ['markdown-vendor', ['react-markdown', 'remark-gfm']],
+  ['resume-studio-form', ['@base-ui/react', 'react-hook-form']],
+  ['resume-studio-editor', ['@mdxeditor/editor']],
+] as const;
 
 function escapeHtml(value: string) {
   return value
@@ -110,6 +116,20 @@ function resumeDataPlugin(mode: string, projectRoot: string): PluginOption {
   };
 }
 
+function getManualChunkName(id: string) {
+  if (!id.includes('/node_modules/')) {
+    return undefined;
+  }
+
+  for (const [chunkName, packages] of MANUAL_CHUNK_RULES) {
+    if (packages.some((packageName) => id.includes(`/node_modules/${packageName}/`))) {
+      return chunkName;
+    }
+  }
+
+  return undefined;
+}
+
 export function createAppViteConfig({
   command,
   dataProjectRoot,
@@ -154,9 +174,7 @@ export function createAppViteConfig({
       chunkSizeWarningLimit: 600,
       rollupOptions: {
         output: {
-          manualChunks: {
-            'react-vendor': ['react', 'react-dom'],
-          },
+          manualChunks: getManualChunkName,
         },
       },
     },

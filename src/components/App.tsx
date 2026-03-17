@@ -1,3 +1,5 @@
+import { Suspense, lazy } from 'react';
+
 import Page from './Layout/Page';
 import { AmbientDesignLayer } from './AmbientDesignLayer';
 import EducationEntryItem from './ItemRenderers/EducationEntryItem';
@@ -8,13 +10,48 @@ import ProfileSection from './ProfileSection';
 import ResumeSection from './ResumeSection';
 import { joinClassNames } from '../helpers/classNames';
 import { ResumeMarkdown } from '../helpers/resume-markdown';
-import { ResumeStudioLauncher } from '../features/resume-studio';
 import useElementVisibility from '../hooks/useElementVisibility';
 import type { ResumeRuntimeData, ResumeWorkItem } from '../data/types/resume';
 
 interface AppProps {
   data: ResumeRuntimeData;
   isResumeStudioPreview?: boolean;
+}
+
+const ResumeStudioLauncher =
+  import.meta.env.DEV
+    ? lazy(async () => {
+        const module = await import('../features/resume-studio');
+
+        return { default: module.ResumeStudioLauncher };
+      })
+    : null;
+
+function ResumeStudioLauncherFallback() {
+  return (
+    <div className="fixed bottom-5 right-5 z-50 print:hidden">
+      <button
+        data-testid="resume-studio-launcher-loading"
+        type="button"
+        disabled
+        className="rounded-full bg-[linear-gradient(135deg,#018741,#0d6f59)] px-5 py-3 text-sm font-medium tracking-[0.01em] text-white shadow-[0_20px_40px_-24px_rgba(1,135,65,0.8)] disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        Loading studio...
+      </button>
+    </div>
+  );
+}
+
+function ResumeStudioLauncherSlot() {
+  if (!ResumeStudioLauncher) {
+    return null;
+  }
+
+  return (
+    <Suspense fallback={<ResumeStudioLauncherFallback />}>
+      <ResumeStudioLauncher />
+    </Suspense>
+  );
 }
 
 function App({ data, isResumeStudioPreview = false }: AppProps) {
@@ -33,7 +70,7 @@ function App({ data, isResumeStudioPreview = false }: AppProps) {
   return (
     <>
       {!isResumeStudioPreview ? <AmbientDesignLayer /> : null}
-      {!isResumeStudioPreview ? <ResumeStudioLauncher /> : null}
+      {!isResumeStudioPreview ? <ResumeStudioLauncherSlot /> : null}
 
       {profilePhoto ? (
         <div

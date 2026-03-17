@@ -8,6 +8,7 @@ import { build as viteBuild, preview as vitePreview, type LogLevel } from 'vite'
 import { RESUME_PDF_DOWNLOAD_HREF } from '../constants';
 
 const DEFAULT_RESUME_PDF_PREVIEW_PORT = 4174;
+const PDF_RENDER_BUILD_MODE = 'production';
 
 function resolvePdfOutputPath(outputRootDir: string, pdfPath: string) {
   return path.resolve(outputRootDir, pdfPath.replace(/^\//, ''));
@@ -83,12 +84,10 @@ async function waitForResumePage(page: Page) {
 async function buildPdfRenderTarget({
   configFile,
   logLevel = 'info',
-  mode,
   outDir,
 }: {
   configFile: string;
   logLevel?: LogLevel;
-  mode: string;
   outDir: string;
 }) {
   await withEnvironment(
@@ -103,7 +102,7 @@ async function buildPdfRenderTarget({
         },
         configFile,
         logLevel,
-        mode,
+        mode: PDF_RENDER_BUILD_MODE,
       });
     }
   );
@@ -112,14 +111,12 @@ async function buildPdfRenderTarget({
 async function writeResumePdf({
   configFile,
   logLevel = 'info',
-  mode,
   outputRootDir,
   previewPort,
   tempDirPrefix = 'cv-lorin-pdf-build-',
 }: {
   configFile: string;
   logLevel?: LogLevel;
-  mode: string;
   outputRootDir: string;
   previewPort: number;
   tempDirPrefix?: string;
@@ -133,7 +130,6 @@ async function writeResumePdf({
     await buildPdfRenderTarget({
       configFile,
       logLevel,
-      mode,
       outDir: previewOutDir,
     });
 
@@ -176,20 +172,17 @@ async function writeResumePdf({
 export async function emitResumePdf({
   configFile,
   logLevel = 'info',
-  mode,
   outputRootDir,
   tempDirPrefix,
 }: {
   configFile: string;
   logLevel?: LogLevel;
-  mode: string;
   outputRootDir: string;
   tempDirPrefix?: string;
 }) {
   await writeResumePdf({
     configFile,
     logLevel,
-    mode,
     outputRootDir,
     previewPort: getResumePdfPreviewPort(),
     tempDirPrefix,

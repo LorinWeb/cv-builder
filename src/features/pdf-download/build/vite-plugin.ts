@@ -37,7 +37,6 @@ export function resumePdfPlugin(projectRoot?: string): Plugin {
 
     await emitResumePdf({
       configFile: resolveViteConfigFile(resolvedConfig),
-      mode: resolvedConfig.mode,
       outputRootDir,
       tempDirPrefix,
     });
