@@ -7,14 +7,16 @@ import WorkExperienceItem from './ItemRenderers/WorkExperienceItem';
 import ProfileSection from './ProfileSection';
 import ResumeSection from './ResumeSection';
 import { joinClassNames } from '../helpers/classNames';
+import { ResumeStudioLauncher } from '../features/resume-studio';
 import useElementVisibility from '../hooks/useElementVisibility';
 import type { ResumeRuntimeData, ResumeWorkItem } from '../data/types/resume';
 
 interface AppProps {
   data: ResumeRuntimeData;
+  isResumeStudioPreview?: boolean;
 }
 
-function App({ data }: AppProps) {
+function App({ data, isResumeStudioPreview = false }: AppProps) {
   const profileData = data.basics;
   const profilePhoto = profileData.photo;
   const workData = data.work || [];
@@ -29,7 +31,8 @@ function App({ data }: AppProps) {
 
   return (
     <>
-      <AmbientDesignLayer />
+      {!isResumeStudioPreview ? <AmbientDesignLayer /> : null}
+      {!isResumeStudioPreview ? <ResumeStudioLauncher /> : null}
 
       {profilePhoto ? (
         <div

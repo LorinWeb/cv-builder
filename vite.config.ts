@@ -1,8 +1,9 @@
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig, type PluginOption } from 'vite';
+import { defineConfig, type PluginOption, type UserConfig } from 'vite';
 
 import {
   getResumeDataWatchPaths,
@@ -13,6 +14,8 @@ import {
   redactResumeData,
 } from './src/features/pdf-download/build';
 import { resumePdfPlugin } from './src/features/pdf-download/build/vite-plugin';
+import { RESUME_STUDIO_WATCH_IGNORED_PATTERNS } from './src/features/resume-studio/constants';
+import { resumeStudioPlugin } from './src/features/resume-studio/server/vite-plugin';
 import { getDocumentTitle, getMetaDescription } from './src/helpers/seo';
 
 const RESUME_DATA_MODULE_ID = 'virtual:resume-data';
@@ -25,9 +28,19 @@ function escapeHtml(value: string) {
     .replaceAll('>', '&gt;');
 }
 
-function resumeDataPlugin(mode: string): PluginOption {
-  const watchedResumeDataPaths = getResumeDataWatchPaths();
-  const getResumeSourceData = () => loadResumeData({ mode });
+interface AppViteConfigOptions {
+  command: 'build' | 'serve';
+  dataProjectRoot?: string;
+  enableResumePdf?: boolean;
+  enableResumeStudio?: boolean;
+  mode: string;
+}
+
+function resumeDataPlugin(mode: string, projectRoot: string): PluginOption {
+  const watchedResumeDataPaths = getResumeDataWatchPaths({
+    projectRoot,
+  });
+  const getResumeSourceData = () => loadResumeData({ mode, projectRoot });
   const getPublicResumeData = () => redactResumeData(getResumeSourceData());
   const getSerializedResumeData = () =>
     getResumeRenderTarget() === 'pdf'
@@ -97,15 +110,27 @@ function resumeDataPlugin(mode: string): PluginOption {
   };
 }
 
-export default defineConfig(({ mode }) => {
+export function createAppViteConfig({
+  command,
+  dataProjectRoot,
+  enableResumePdf,
+  enableResumeStudio,
+  mode,
+}: AppViteConfigOptions): UserConfig {
+  const appRoot = fileURLToPath(new URL('.', import.meta.url));
+  const resolvedDataProjectRoot = path.resolve(appRoot, dataProjectRoot || '.');
   const renderTarget = getResumeRenderTarget();
+  const shouldEnableResumePdf = enableResumePdf ?? renderTarget === 'web';
+  const shouldEnableResumeStudio =
+    enableResumeStudio ?? (command === 'serve' && mode !== 'test');
 
   return {
     plugins: [
       react(),
       tailwindcss(),
-      resumeDataPlugin(mode),
-      renderTarget === 'web' ? resumePdfPlugin() : null,
+      resumeDataPlugin(mode, resolvedDataProjectRoot),
+      shouldEnableResumePdf ? resumePdfPlugin(resolvedDataProjectRoot) : null,
+      shouldEnableResumeStudio ? resumeStudioPlugin(resolvedDataProjectRoot) : null,
     ],
     resolve: {
       alias: {
@@ -115,10 +140,13 @@ export default defineConfig(({ mode }) => {
     define: {
       __RESUME_RENDER_TARGET__: JSON.stringify(renderTarget),
     },
-    publicDir: 'public',
-    root: '.',
+    publicDir: path.resolve(resolvedDataProjectRoot, 'public'),
+    root: appRoot,
     server: {
       host: true,
+      watch: {
+        ignored: [...RESUME_STUDIO_WATCH_IGNORED_PATTERNS],
+      },
     },
     build: {
       outDir: process.env.RESUME_BUILD_OUT_DIR || 'dist',
@@ -133,4 +161,11 @@ export default defineConfig(({ mode }) => {
       },
     },
   };
-});
+}
+
+export default defineConfig(({ command, mode }) =>
+  createAppViteConfig({
+    command,
+    mode,
+  })
+);

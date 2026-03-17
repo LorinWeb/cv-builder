@@ -21,6 +21,7 @@
 .env.production.local
 public/static/private/
 public/downloads/
+src/data/local/
 src/data/*.private.json
 
 npm-debug.log*

@@ -1,0 +1,111 @@
+import type { ChangeEvent } from 'react';
+import { useFormContext } from 'react-hook-form';
+
+import { ResumeStudioInputField, ResumeStudioSectionCard, ResumeStudioTextAreaField } from '../form-fields';
+import type { ResumeStudioDraft } from '../../types';
+
+interface ResumeStudioBasicsStepProps {
+  isUploadingPhoto: boolean;
+  onUploadPhoto: (file: File) => Promise<void>;
+}
+
+function RemovePhotoIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3 w-3 stroke-current">
+      <path
+        d="M4 4l8 8M12 4 4 12"
+        fill="none"
+        strokeLinecap="round"
+        strokeWidth="1.75"
+      />
+    </svg>
+  );
+}
+
+export function ResumeStudioBasicsStep({
+  isUploadingPhoto,
+  onUploadPhoto,
+}: ResumeStudioBasicsStepProps) {
+  const { setValue, watch } = useFormContext<ResumeStudioDraft>();
+  const name = watch('basics.name');
+  const photoSrc = watch('basics.photoSrc');
+  const photoPreviewAlt = `${name?.trim() || 'Profile'} photo`;
+
+  async function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    await onUploadPhoto(file);
+    event.target.value = '';
+  }
+
+  function handleRemovePhoto() {
+    setValue('basics.photoSrc', '', { shouldDirty: true, shouldTouch: true });
+  }
+
+  return (
+    <div className="space-y-4">
+      <ResumeStudioSectionCard title="Profile">
+        <div className="grid gap-4 md:grid-cols-2">
+          <ResumeStudioInputField
+            label="Name"
+            name="basics.name"
+            placeholder="Jane Doe"
+            testId="resume-studio-field-basics-name"
+          />
+          <ResumeStudioInputField
+            label="Title"
+            name="basics.label"
+            placeholder="Staff Engineer"
+          />
+        </div>
+        <ResumeStudioTextAreaField
+          label="Summary"
+          name="basics.summary"
+          placeholder="Explain your strengths, scope, and the kind of work you want next."
+          rows={5}
+          testId="resume-studio-field-basics-summary"
+        />
+      </ResumeStudioSectionCard>
+
+      <ResumeStudioSectionCard title="Portrait">
+        <div className="rounded-3xl border border-dashed border-[rgba(74,127,122,0.25)] bg-[rgba(242,246,241,0.76)] p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="inline-flex cursor-pointer items-center rounded-full bg-(--color-primary) px-4 py-2 text-sm font-medium text-white">
+              {isUploadingPhoto ? 'Uploading…' : 'Upload Photo'}
+              <input
+                data-testid="resume-studio-photo-input"
+                className="sr-only"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={handlePhotoChange}
+              />
+            </label>
+            {photoSrc ? (
+              <div className="relative">
+                <img
+                  data-testid="resume-studio-photo-preview"
+                  src={photoSrc}
+                  alt={photoPreviewAlt}
+                  className="h-14 w-14 rounded-2xl border border-[rgba(74,127,122,0.18)] object-cover object-center shadow-[0_12px_24px_-18px_rgba(11,37,31,0.45)]"
+                />
+                <button
+                  data-testid="resume-studio-remove-photo"
+                  type="button"
+                  aria-label="Remove portrait"
+                  onClick={handleRemovePhoto}
+                  className="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#c53a3a] text-white transition hover:bg-[#ab2c2c]"
+                >
+                  <RemovePhotoIcon />
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </ResumeStudioSectionCard>
+    </div>
+  );
+}

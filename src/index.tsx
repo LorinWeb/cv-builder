@@ -2,6 +2,11 @@ import { createRoot } from 'react-dom/client';
 
 import App from './components/App';
 import resumeData from './data/resume';
+import {
+  isResumeStudioPreviewMessage,
+  isResumeStudioPreviewMode,
+  RESUME_STUDIO_PREVIEW_EVENT,
+} from './features/resume-studio/runtime';
 import { getDocumentTitle, getMetaDescription } from './helpers/seo';
 import type { ResumeRuntimeData } from './data/types/resume';
 import './styles/index.css';
@@ -13,6 +18,7 @@ if (!container) {
 }
 
 const root = createRoot(container);
+const resumeStudioPreviewMode = isResumeStudioPreviewMode();
 
 function syncDocumentHead(data: ResumeRuntimeData) {
   document.title = getDocumentTitle(data);
@@ -32,7 +38,7 @@ function syncDocumentHead(data: ResumeRuntimeData) {
 
 function renderApp(data: ResumeRuntimeData) {
   syncDocumentHead(data);
-  root.render(<App data={data} />);
+  root.render(<App data={data} isResumeStudioPreview={resumeStudioPreviewMode} />);
 }
 
 renderApp(resumeData);
@@ -45,4 +51,22 @@ if (import.meta.hot) {
 
     renderApp(nextModule.default);
   });
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener(RESUME_STUDIO_PREVIEW_EVENT, (event) => {
+    const previewEvent = event as CustomEvent<ResumeRuntimeData>;
+
+    renderApp(previewEvent.detail);
+  });
+
+  if (resumeStudioPreviewMode) {
+    window.addEventListener('message', (event) => {
+      if (!isResumeStudioPreviewMessage(event.data)) {
+        return;
+      }
+
+      renderApp(event.data.data);
+    });
+  }
 }

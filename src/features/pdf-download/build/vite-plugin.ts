@@ -15,7 +15,7 @@ function resolveViteConfigFile(config: ResolvedConfig) {
   return config.configFile;
 }
 
-export function resumePdfPlugin(): Plugin {
+export function resumePdfPlugin(projectRoot?: string): Plugin {
   let resolvedConfig: ResolvedConfig | null = null;
 
   function getWatchedResumeDataPaths() {
@@ -25,9 +25,9 @@ export function resumePdfPlugin(): Plugin {
       );
     }
 
-    return getResumeDataWatchPaths({
-      projectRoot: resolvedConfig.root,
-    });
+      return getResumeDataWatchPaths({
+        projectRoot: projectRoot || resolvedConfig.root,
+      });
   }
 
   async function generatePdf(outputRootDir: string, tempDirPrefix: string) {
