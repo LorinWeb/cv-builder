@@ -5,7 +5,7 @@ import { resumeDataSchema } from '../../../data/resume-schema';
 import type { ResumeSourceData } from '../../../data/types/resume';
 import { RESUME_STUDIO_DB_PATH, RESUME_STUDIO_PRIVATE_DATA_PATH, RESUME_STUDIO_PUBLIC_UPLOADS_DIR } from '../constants';
 
-export interface ResumeStudioPaths {
+interface ResumeStudioPaths {
   databasePath: string;
   privateDataPath: string;
   publicUploadsDir: string;
@@ -55,8 +55,4 @@ export function writeResumeStudioPrivateData(
 
   mkdirSync(path.dirname(privateDataPath), { recursive: true });
   writeFileSync(privateDataPath, `${JSON.stringify(parsed, null, 2)}\n`);
-}
-
-export function ensureResumeStudioDirectory(filePath: string) {
-  mkdirSync(path.dirname(filePath), { recursive: true });
 }

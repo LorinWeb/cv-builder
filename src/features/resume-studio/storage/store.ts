@@ -1,5 +1,4 @@
 import type { ResumeSourceData } from '../../../data/types/resume';
-import { getResumeStudioWarnings } from '../compatibility';
 import {
   RESUME_STUDIO_DEFAULT_IMPORTED_VERSION_NAME,
   RESUME_STUDIO_DEFAULT_PRIMARY_VERSION_NAME,
@@ -12,9 +11,26 @@ import {
   writeResumeStudioPrivateData,
 } from './json-sync';
 import { SqliteResumeStudioStore } from './sqlite-store';
-import { createResumeStudioStarterData } from './starter-data';
 
-export interface ResumeStudioStoreController {
+function getResumeStudioWarnings(_data: ResumeSourceData): ResumeStudioState['warnings'] {
+  return [];
+}
+
+function createResumeStudioStarterData(): ResumeSourceData {
+  return {
+    basics: {
+      label: 'Your next role title',
+      name: 'Your Name',
+      summary:
+        'Write a concise summary that explains your strengths, your focus area, and the kind of work you want next.',
+    },
+    education: [],
+    skills: [],
+    work: [],
+  };
+}
+
+interface ResumeStudioStoreController {
   close(): void;
   createVersion(name: string): ResumeStudioState;
   deleteVersion(id: number): ResumeStudioState;
@@ -75,6 +91,26 @@ export function createResumeStudioStore(
     if (writePrivateData) {
       writeResumeStudioPrivateData(projectRoot, data);
     }
+  }
+
+  function activateVersionAndSync(
+    versionId: number,
+    data: ResumeSourceData,
+    updatedAt: string,
+    writePrivateData = true
+  ) {
+    setActiveVersion(versionId);
+    publishVersionAndSync(versionId, data, updatedAt, writePrivateData);
+  }
+
+  function getActiveVersionOrThrow(errorMessage: string) {
+    const activeVersion = getStorage().getActiveVersion();
+
+    if (!activeVersion) {
+      throw new Error(errorMessage);
+    }
+
+    return activeVersion;
   }
 
   function getDraftState(source: 'private' | 'sample'): ResumeStudioState {
@@ -142,7 +178,7 @@ export function createResumeStudioStore(
     }
 
     if (activeVersion && !publishedState) {
-      publishVersionAndSync(
+      activateVersionAndSync(
         activeVersion.id,
         privateData || activeVersion.data,
         activeVersion.updatedAt,
@@ -161,8 +197,7 @@ export function createResumeStudioStore(
         legacyDraft.updatedAt
       );
 
-      setActiveVersion(versionId);
-      publishVersionAndSync(versionId, legacyDraft.data, legacyDraft.updatedAt);
+      activateVersionAndSync(versionId, legacyDraft.data, legacyDraft.updatedAt);
       return;
     }
 
@@ -175,8 +210,7 @@ export function createResumeStudioStore(
         throw new Error('Resume Studio could not restore the existing version state.');
       }
 
-      setActiveVersion(version.id);
-      publishVersionAndSync(
+      activateVersionAndSync(
         version.id,
         privateData || version.data,
         version.updatedAt,
@@ -197,8 +231,7 @@ export function createResumeStudioStore(
       timestamp
     );
 
-    setActiveVersion(versionId);
-    publishVersionAndSync(versionId, privateData, timestamp, false);
+    activateVersionAndSync(versionId, privateData, timestamp, false);
   }
 
   function getState() {
@@ -223,18 +256,15 @@ export function createResumeStudioStore(
       timestamp
     );
 
-    setActiveVersion(versionId);
-    publishVersionAndSync(versionId, data, timestamp);
+    activateVersionAndSync(versionId, data, timestamp);
 
     return getState();
   }
 
   function saveDraft(data: ResumeSourceData) {
-    const activeVersion = getStorage().getActiveVersion();
-
-    if (!activeVersion) {
-      throw new Error('Cannot save before an editable CV version exists.');
-    }
+    const activeVersion = getActiveVersionOrThrow(
+      'Cannot save before an editable CV version exists.'
+    );
 
     const timestamp = nowIsoString();
 
@@ -250,11 +280,9 @@ export function createResumeStudioStore(
       throw new Error('Version name is required.');
     }
 
-    const activeVersion = getStorage().getActiveVersion();
-
-    if (!activeVersion) {
-      throw new Error('Cannot create a version before an editable CV version exists.');
-    }
+    const activeVersion = getActiveVersionOrThrow(
+      'Cannot create a version before an editable CV version exists.'
+    );
 
     const versionId = getStorage().createVersion(
       trimmedName,
@@ -268,11 +296,9 @@ export function createResumeStudioStore(
   }
 
   function publishActiveVersion() {
-    const activeVersion = getStorage().getActiveVersion();
-
-    if (!activeVersion) {
-      throw new Error('Cannot publish before an editable CV version exists.');
-    }
+    const activeVersion = getActiveVersionOrThrow(
+      'Cannot publish before an editable CV version exists.'
+    );
 
     publishVersionAndSync(
       activeVersion.id,

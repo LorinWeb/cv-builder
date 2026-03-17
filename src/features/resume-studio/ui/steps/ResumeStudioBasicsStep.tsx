@@ -1,26 +1,15 @@
 import type { ChangeEvent } from 'react';
+import { X } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 
 import { TextEditor } from '../TextEditor';
 import { ResumeStudioInputField, ResumeStudioSectionCard } from '../form-fields';
+import { ResumeStudioButton } from '../primitives';
 import type { ResumeStudioDraft } from '../../types';
 
 interface ResumeStudioBasicsStepProps {
   isUploadingPhoto: boolean;
   onUploadPhoto: (file: File) => Promise<void>;
-}
-
-function RemovePhotoIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3 w-3 stroke-current">
-      <path
-        d="M4 4l8 8M12 4 4 12"
-        fill="none"
-        strokeLinecap="round"
-        strokeWidth="1.75"
-      />
-    </svg>
-  );
 }
 
 export function ResumeStudioBasicsStep({
@@ -94,15 +83,16 @@ export function ResumeStudioBasicsStep({
                   alt={photoPreviewAlt}
                   className="h-14 w-14 rounded-2xl border border-[rgba(74,127,122,0.18)] object-cover object-center shadow-[0_12px_24px_-18px_rgba(11,37,31,0.45)]"
                 />
-                <button
-                  data-testid="resume-studio-remove-photo"
-                  type="button"
+                <ResumeStudioButton
                   aria-label="Remove portrait"
+                  data-testid="resume-studio-remove-photo"
                   onClick={handleRemovePhoto}
-                  className="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#c53a3a] text-white transition hover:bg-[#ab2c2c]"
+                  size="icon"
+                  variant="dangerSolid"
+                  className="absolute -right-1 -top-1 h-5 w-5"
                 >
-                  <RemovePhotoIcon />
-                </button>
+                  <X className="h-3 w-3" />
+                </ResumeStudioButton>
               </div>
             ) : null}
           </div>

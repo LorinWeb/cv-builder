@@ -16,7 +16,7 @@ import type {
 
 export const RESUME_STUDIO_PREVIEW_EVENT = 'resume-studio:preview-data';
 
-export interface ResumeStudioPreviewMessage {
+interface ResumeStudioPreviewMessage {
   data: ReturnType<typeof redactResumeData>;
   type: typeof RESUME_STUDIO_PREVIEW_MESSAGE_TYPE;
 }
@@ -29,6 +29,10 @@ export class ResumeStudioApiError extends Error {
     this.fieldErrors = fieldErrors;
   }
 }
+
+const RESUME_STUDIO_JSON_HEADERS = {
+  'Content-Type': 'application/json',
+};
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${RESUME_STUDIO_API_ROOT}${path}`, init);
@@ -43,6 +47,18 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return (await response.json()) as T;
+}
+
+function requestJsonWithPayload<T>(
+  path: string,
+  method: 'POST' | 'PUT',
+  payload: unknown
+) {
+  return requestJson<T>(path, {
+    body: JSON.stringify(payload),
+    headers: RESUME_STUDIO_JSON_HEADERS,
+    method,
+  });
 }
 
 export function isResumeStudioEnabled() {
@@ -71,7 +87,7 @@ export function getResumeStudioPreviewUrl() {
   return url.toString();
 }
 
-export function toResumeStudioPreviewData(data: ResumeSourceData) {
+function toResumeStudioPreviewData(data: ResumeSourceData) {
   return redactResumeData(data);
 }
 
@@ -121,25 +137,13 @@ export function initializeResumeStudio() {
 }
 
 export function saveResumeStudioDraft(payload: ResumeStudioDraftPayload) {
-  return requestJson<ResumeStudioState>('/draft', {
-    body: JSON.stringify(payload),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'PUT',
-  });
+  return requestJsonWithPayload<ResumeStudioState>('/draft', 'PUT', payload);
 }
 
 export function createResumeStudioVersion(
   payload: ResumeStudioCreateVersionPayload
 ) {
-  return requestJson<ResumeStudioState>('/versions', {
-    body: JSON.stringify(payload),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  });
+  return requestJsonWithPayload<ResumeStudioState>('/versions', 'POST', payload);
 }
 
 export function publishResumeStudioVersion() {
@@ -163,11 +167,9 @@ export function selectResumeStudioVersion(versionId: number) {
 export function uploadResumeStudioPhoto(
   payload: ResumeStudioPhotoUploadPayload
 ) {
-  return requestJson<ResumeStudioPhotoUploadResult>('/upload-photo', {
-    body: JSON.stringify(payload),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  });
+  return requestJsonWithPayload<ResumeStudioPhotoUploadResult>(
+    '/upload-photo',
+    'POST',
+    payload
+  );
 }

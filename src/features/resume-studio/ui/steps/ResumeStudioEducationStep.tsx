@@ -1,7 +1,9 @@
 import { useFieldArray, useFormContext } from 'react-hook-form';
 
+import { createEmptyResumeStudioEducationDraft } from '../../draft-factories';
 import { ListItemsEditor } from '../ListItemsEditor';
 import { ResumeStudioInputField, ResumeStudioSectionCard } from '../form-fields';
+import { ResumeStudioButton, ResumeStudioCard } from '../primitives';
 import type { ResumeStudioDraft } from '../../types';
 
 export function ResumeStudioEducationStep() {
@@ -15,9 +17,8 @@ export function ResumeStudioEducationStep() {
     <ResumeStudioSectionCard title="Education">
       <div className="space-y-4">
         {fields.map((field, index) => (
-          <div
+          <ResumeStudioCard
             key={field.id}
-            className="rounded-3xl border border-[rgba(74,127,122,0.14)] bg-[rgba(242,246,241,0.76)] p-4"
           >
             <div className="grid gap-4 md:grid-cols-2">
               <ResumeStudioInputField
@@ -62,35 +63,21 @@ export function ResumeStudioEducationStep() {
               />
             </div>
             <div className="mt-4 flex justify-end">
-              <button
-                type="button"
+              <ResumeStudioButton
                 onClick={() => remove(index)}
-                className="rounded-full border border-[rgba(155,44,44,0.2)] px-3 py-1.5 text-xs font-medium text-[#9b2c2c]"
+                size="compact"
+                variant="dangerOutline"
               >
                 Remove education
-              </button>
+              </ResumeStudioButton>
             </div>
-          </div>
+          </ResumeStudioCard>
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={() =>
-          append({
-            area: '',
-            courses: [],
-            endDate: '',
-            gpa: '',
-            institution: '',
-            startDate: '',
-            studyType: '',
-          })
-        }
-        className="rounded-full border border-(--color-header-border) bg-white px-4 py-2 text-sm font-medium text-(--color-primary)"
-      >
+      <ResumeStudioButton onClick={() => append(createEmptyResumeStudioEducationDraft())}>
         Add education entry
-      </button>
+      </ResumeStudioButton>
     </ResumeStudioSectionCard>
   );
 }

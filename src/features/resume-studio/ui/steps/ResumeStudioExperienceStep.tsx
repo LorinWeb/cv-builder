@@ -4,9 +4,10 @@ import {
   createEmptyResumeStudioProgressionGroupDraft,
   createEmptyResumeStudioStandaloneWorkDraft,
   isResumeStudioProgressionGroupDraft,
-} from '../../work-draft';
+} from '../../draft-factories';
 import type { ResumeStudioDraft } from '../../types';
 import { ResumeStudioSectionCard } from '../form-fields';
+import { ResumeStudioButton } from '../primitives';
 import { ResumeStudioProgressionGroupCard } from './ResumeStudioProgressionGroupCard';
 import { ResumeStudioStandaloneWorkCard } from './ResumeStudioStandaloneWorkCard';
 
@@ -38,20 +39,16 @@ export function ResumeStudioExperienceStep() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
+        <ResumeStudioButton
           onClick={() => append(createEmptyResumeStudioStandaloneWorkDraft())}
-          className="rounded-full border border-(--color-header-border) bg-white px-4 py-2 text-sm font-medium text-(--color-primary)"
         >
           Add role
-        </button>
-        <button
-          type="button"
+        </ResumeStudioButton>
+        <ResumeStudioButton
           onClick={() => append(createEmptyResumeStudioProgressionGroupDraft())}
-          className="rounded-full border border-(--color-header-border) bg-white px-4 py-2 text-sm font-medium text-(--color-primary)"
         >
           Add company progression
-        </button>
+        </ResumeStudioButton>
       </div>
     </ResumeStudioSectionCard>
   );

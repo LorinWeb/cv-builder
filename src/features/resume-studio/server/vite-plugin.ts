@@ -64,6 +64,12 @@ function getFieldErrors(data: unknown) {
   );
 }
 
+function getVersionId(pathname: string) {
+  const versionId = pathname.split('/')[3];
+
+  return versionId ? Number(versionId) : null;
+}
+
 export function resumeStudioPlugin(projectRoot: string): Plugin {
   const store = createResumeStudioStore(projectRoot);
 
@@ -130,7 +136,12 @@ export function resumeStudioPlugin(projectRoot: string): Plugin {
         request.method === 'DELETE' &&
         /^\/__resume-studio\/versions\/\d+$/.test(url.pathname)
       ) {
-        const versionId = Number(url.pathname.split('/')[3]);
+        const versionId = getVersionId(url.pathname);
+
+        if (versionId === null) {
+          sendError(response, 404, 'Resume Studio endpoint was not found.');
+          return;
+        }
 
         sendJson(response, 200, store.deleteVersion(versionId));
         return;
@@ -138,9 +149,14 @@ export function resumeStudioPlugin(projectRoot: string): Plugin {
 
       if (
         request.method === 'POST' &&
-        /^\/__resume-studio\/versions\/\d+\/(restore|select)$/.test(url.pathname)
+        /^\/__resume-studio\/versions\/\d+\/select$/.test(url.pathname)
       ) {
-        const versionId = Number(url.pathname.split('/')[3]);
+        const versionId = getVersionId(url.pathname);
+
+        if (versionId === null) {
+          sendError(response, 404, 'Resume Studio endpoint was not found.');
+          return;
+        }
 
         sendJson(response, 200, store.selectVersion(versionId));
         return;

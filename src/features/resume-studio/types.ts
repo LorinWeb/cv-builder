@@ -1,8 +1,8 @@
 import type { PrintConfig, ResumeSourceData } from '../../data/types/resume';
 
-export type ResumeStudioSource = 'private' | 'sample';
 export type ResumeStudioStepId = 'basics' | 'contacts' | 'achievements' | 'experience' | 'skills' | 'education';
-export type ResumeStudioWarningCode = string;
+type ResumeStudioSource = 'private' | 'sample';
+type ResumeStudioWarningCode = string;
 
 export interface ResumeStudioTextDraft extends PrintConfig {
   text: string;

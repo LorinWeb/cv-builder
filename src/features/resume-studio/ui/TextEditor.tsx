@@ -13,12 +13,12 @@ import {
   UndoRedo,
 } from '@mdxeditor/editor';
 import '@mdxeditor/editor/style.css';
-import { Field } from '@base-ui/react/field';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useController, type Path } from 'react-hook-form';
 
 import { joinClassNames } from '../../../helpers/classNames';
 import type { ResumeStudioDraft } from '../types';
+import { ResumeStudioFieldFrame } from './form-fields';
 
 const EDITOR_TOOLBAR_CLASS_NAME =
   'resume-studio-editor-toolbar flex-wrap items-center gap-1 border-b border-[rgba(74,127,122,0.14)] bg-[rgba(242,246,241,0.76)] px-2.5 py-2';
@@ -155,15 +155,16 @@ export function TextEditor({
   }
 
   return (
-    <Field.Root className={rootClassName} invalid={Boolean(errorMessage)} name={name}>
-      <div className={joinClassNames('flex flex-col gap-1.5', containerClassName)}>
-        <Field.Label
-          className={
-            hideLabel ? 'sr-only' : 'text-sm font-medium text-(--color-primary)'
-          }
-        >
-          {label}
-        </Field.Label>
+    <ResumeStudioFieldFrame
+      containerClassName={containerClassName}
+      description={description}
+      errorMessage={errorMessage}
+      hideLabel={hideLabel}
+      invalid={Boolean(errorMessage)}
+      label={label}
+      name={name}
+      rootClassName={rootClassName}
+    >
         <div
           ref={wrapperRef}
           data-testid={testId}
@@ -207,15 +208,6 @@ export function TextEditor({
             spellCheck
           />
         </div>
-        {description ? (
-          <Field.Description className="text-xs leading-5 text-(--color-secondary)">
-            {description}
-          </Field.Description>
-        ) : null}
-        {errorMessage ? (
-          <p className="text-xs font-medium text-[#9b2c2c]">{errorMessage}</p>
-        ) : null}
-      </div>
-    </Field.Root>
+    </ResumeStudioFieldFrame>
   );
 }

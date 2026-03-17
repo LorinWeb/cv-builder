@@ -1,5 +1,6 @@
 import { Field } from '@base-ui/react/field';
 import { Input } from '@base-ui/react/input';
+import type { ReactNode } from 'react';
 import { Controller, useFormContext, type Path } from 'react-hook-form';
 
 import { joinClassNames } from '../../../helpers/classNames';
@@ -14,6 +15,53 @@ interface ResumeStudioInputFieldProps {
   readOnly?: boolean;
   testId?: string;
   type?: 'email' | 'text' | 'url';
+}
+
+interface ResumeStudioFieldFrameProps {
+  children: ReactNode;
+  containerClassName?: string;
+  description?: string;
+  errorMessage?: string;
+  hideLabel?: boolean;
+  invalid?: boolean;
+  label: string;
+  name: Path<ResumeStudioDraft>;
+  rootClassName?: string;
+}
+
+export function ResumeStudioFieldFrame({
+  children,
+  containerClassName,
+  description,
+  errorMessage,
+  hideLabel = false,
+  invalid = false,
+  label,
+  name,
+  rootClassName,
+}: ResumeStudioFieldFrameProps) {
+  return (
+    <Field.Root className={rootClassName} invalid={invalid} name={name}>
+      <div className={joinClassNames('flex flex-col gap-1.5', containerClassName)}>
+        <Field.Label
+          className={
+            hideLabel ? 'sr-only' : 'text-sm font-medium text-(--color-primary)'
+          }
+        >
+          {label}
+        </Field.Label>
+        {children}
+        {description ? (
+          <Field.Description className="text-xs leading-5 text-(--color-secondary)">
+            {description}
+          </Field.Description>
+        ) : null}
+        {errorMessage ? (
+          <p className="text-xs font-medium text-[#9b2c2c]">{errorMessage}</p>
+        ) : null}
+      </div>
+    </Field.Root>
+  );
 }
 
 export function ResumeStudioInputField({
@@ -31,15 +79,14 @@ export function ResumeStudioInputField({
   const errorMessage = fieldState.error?.message;
 
   return (
-    <Field.Root invalid={Boolean(errorMessage)} name={name}>
-      <div className="flex flex-col gap-1.5">
-        <Field.Label
-          className={
-            hideLabel ? 'sr-only' : 'text-sm font-medium text-(--color-primary)'
-          }
-        >
-          {label}
-        </Field.Label>
+    <ResumeStudioFieldFrame
+      description={description}
+      errorMessage={errorMessage}
+      hideLabel={hideLabel}
+      invalid={Boolean(errorMessage)}
+      label={label}
+      name={name}
+    >
         <Controller
           control={control}
           name={name}
@@ -61,16 +108,7 @@ export function ResumeStudioInputField({
             />
           )}
         />
-        {description ? (
-          <Field.Description className="text-xs leading-5 text-(--color-secondary)">
-            {description}
-          </Field.Description>
-        ) : null}
-        {errorMessage ? (
-          <p className="text-xs font-medium text-[#9b2c2c]">{errorMessage}</p>
-        ) : null}
-      </div>
-    </Field.Root>
+    </ResumeStudioFieldFrame>
   );
 }
 

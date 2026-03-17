@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
 
 import { ResumeStudioSectionCard } from './form-fields';
+import { ResumeStudioButton, ResumeStudioCard } from './primitives';
 import type { ResumeVersionSummary } from '../types';
 
 interface ResumeStudioVersionsTabProps {
@@ -45,15 +46,15 @@ export function ResumeStudioVersionsTab({
             placeholder="Spring 2026 product CV"
             className="w-full rounded-2xl border border-[rgba(74,127,122,0.25)] bg-white px-3.5 py-2.5 text-sm text-[#17312a] outline-none transition focus:border-(--color-primary) focus:ring-2 focus:ring-[rgba(1,135,65,0.15)]"
           />
-          <button
+          <ResumeStudioButton
             data-testid="resume-studio-create-version"
-            type="button"
             onClick={onCreateVersion}
             disabled={!canCreateVersion || isCreatingVersion}
-            className="rounded-full bg-(--color-primary) px-5 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+            size="wide"
+            variant="primary"
           >
             {isCreatingVersion ? 'Creating…' : 'Create version'}
-          </button>
+          </ResumeStudioButton>
         </div>
         {!canCreateVersion ? (
           <p className="m-0 text-xs leading-5 text-(--color-secondary)">
@@ -70,10 +71,12 @@ export function ResumeStudioVersionsTab({
         ) : (
           <ul data-testid="resume-studio-versions" className="m-0 list-none space-y-3 p-0">
             {versions.map((version) => (
-              <li
+              <ResumeStudioCard
                 key={version.id}
+                as="li"
                 data-testid={`resume-studio-version-item-${version.id}`}
-                className="flex flex-col gap-3 rounded-2xl border border-[rgba(74,127,122,0.14)] bg-[rgba(242,246,241,0.76)] p-4 md:flex-row md:items-center md:justify-between"
+                spacing="compact"
+                className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
               >
                 <div>
                   <p className="m-0 flex items-center gap-2 text-sm font-medium text-(--color-primary)">
@@ -102,37 +105,34 @@ export function ResumeStudioVersionsTab({
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
+                  <ResumeStudioButton
                     onClick={() => onSelectVersion(version.id)}
                     disabled={
                       isSelectingVersionId === version.id ||
                       isDeletingVersionId === version.id ||
                       activeVersionId === version.id
                     }
-                    className="rounded-full border border-(--color-header-border) bg-white px-4 py-2 text-sm font-medium text-(--color-primary) disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {activeVersionId === version.id
                       ? 'Editing'
                       : isSelectingVersionId === version.id
                         ? 'Opening…'
                         : 'Edit version'}
-                  </button>
+                  </ResumeStudioButton>
                   {!version.isPublished ? (
-                    <button
-                      type="button"
+                    <ResumeStudioButton
                       onClick={() => onDeleteVersion(version.id)}
                       disabled={
                         isDeletingVersionId === version.id ||
                         isSelectingVersionId === version.id
                       }
-                      className="rounded-full border border-[rgba(155,44,44,0.24)] bg-[rgba(155,44,44,0.08)] px-4 py-2 text-sm font-medium text-[#9b2c2c] disabled:cursor-not-allowed disabled:opacity-50"
+                      variant="dangerTint"
                     >
                       {isDeletingVersionId === version.id ? 'Deleting…' : 'Delete'}
-                    </button>
+                    </ResumeStudioButton>
                   ) : null}
                 </div>
-              </li>
+              </ResumeStudioCard>
             ))}
           </ul>
         )}

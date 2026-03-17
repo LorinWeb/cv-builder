@@ -1,5 +1,7 @@
-import { RESUME_STUDIO_STEP_ORDER } from '../constants';
+import type { ReactElement } from 'react';
+
 import type { ResumeStudioStepId } from '../types';
+import { ResumeStudioButton } from './primitives';
 import { ResumeStudioAchievementsStep } from './steps/ResumeStudioAchievementsStep';
 import { ResumeStudioBasicsStep } from './steps/ResumeStudioBasicsStep';
 import { ResumeStudioContactsStep } from './steps/ResumeStudioContactsStep';
@@ -14,14 +16,51 @@ interface ResumeStudioEditTabProps {
   onUploadPhoto: (file: File) => Promise<void>;
 }
 
-const STEP_LABELS: Record<ResumeStudioStepId, string> = {
-  achievements: 'Achievements',
-  basics: 'Basics',
-  contacts: 'Contacts',
-  education: 'Education',
-  experience: 'Experience',
-  skills: 'Skills',
+type ResumeStudioStepDefinition = {
+  id: ResumeStudioStepId;
+  label: string;
+  render: (
+    props: Pick<ResumeStudioEditTabProps, 'isUploadingPhoto' | 'onUploadPhoto'>
+  ) => ReactElement;
 };
+
+const RESUME_STUDIO_STEP_DEFINITIONS: ResumeStudioStepDefinition[] = [
+  {
+    id: 'basics',
+    label: 'Basics',
+    render: ({ isUploadingPhoto, onUploadPhoto }) => (
+      <ResumeStudioBasicsStep
+        isUploadingPhoto={isUploadingPhoto}
+        onUploadPhoto={onUploadPhoto}
+      />
+    ),
+  },
+  {
+    id: 'contacts',
+    label: 'Contacts',
+    render: () => <ResumeStudioContactsStep />,
+  },
+  {
+    id: 'achievements',
+    label: 'Achievements',
+    render: () => <ResumeStudioAchievementsStep />,
+  },
+  {
+    id: 'experience',
+    label: 'Experience',
+    render: () => <ResumeStudioExperienceStep />,
+  },
+  {
+    id: 'skills',
+    label: 'Skills',
+    render: () => <ResumeStudioSkillsStep />,
+  },
+  {
+    id: 'education',
+    label: 'Education',
+    render: () => <ResumeStudioEducationStep />,
+  },
+];
 
 export function ResumeStudioEditTab({
   currentStep,
@@ -29,48 +68,28 @@ export function ResumeStudioEditTab({
   onStepChange,
   onUploadPhoto,
 }: ResumeStudioEditTabProps) {
-  function renderCurrentStep() {
-    switch (currentStep) {
-      case 'basics':
-        return (
-          <ResumeStudioBasicsStep
-            isUploadingPhoto={isUploadingPhoto}
-            onUploadPhoto={onUploadPhoto}
-          />
-        );
-      case 'contacts':
-        return <ResumeStudioContactsStep />;
-      case 'achievements':
-        return <ResumeStudioAchievementsStep />;
-      case 'experience':
-        return <ResumeStudioExperienceStep />;
-      case 'skills':
-        return <ResumeStudioSkillsStep />;
-      case 'education':
-        return <ResumeStudioEducationStep />;
-    }
-  }
+  const currentStepDefinition =
+    RESUME_STUDIO_STEP_DEFINITIONS.find((step) => step.id === currentStep) ||
+    RESUME_STUDIO_STEP_DEFINITIONS[0];
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap gap-2">
-        {RESUME_STUDIO_STEP_ORDER.map((step) => (
-          <button
-            key={step}
-            type="button"
-            onClick={() => onStepChange(step)}
-            className={
-              currentStep === step
-                ? 'rounded-full bg-(--color-primary) px-4 py-2 text-sm font-medium text-white'
-                : 'rounded-full border border-(--color-header-border) bg-white px-4 py-2 text-sm font-medium text-(--color-primary)'
-            }
+        {RESUME_STUDIO_STEP_DEFINITIONS.map((step) => (
+          <ResumeStudioButton
+            key={step.id}
+            onClick={() => onStepChange(step.id)}
+            variant={currentStep === step.id ? 'primary' : 'secondary'}
           >
-            {STEP_LABELS[step]}
-          </button>
+            {step.label}
+          </ResumeStudioButton>
         ))}
       </div>
 
-      {renderCurrentStep()}
+      {currentStepDefinition.render({
+        isUploadingPhoto,
+        onUploadPhoto,
+      })}
     </div>
   );
 }

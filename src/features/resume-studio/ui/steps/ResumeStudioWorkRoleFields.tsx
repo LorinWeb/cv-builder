@@ -3,6 +3,7 @@ import { useFormContext, type Path } from 'react-hook-form';
 import { ListItemsEditor } from '../ListItemsEditor';
 import { TextEditor } from '../TextEditor';
 import { ResumeStudioInputField } from '../form-fields';
+import { ResumeStudioButton } from '../primitives';
 import type { ResumeStudioDraft } from '../../types';
 
 interface ResumeStudioWorkRoleFieldsProps {
@@ -88,13 +89,13 @@ export function ResumeStudioWorkRoleFields({
 
       {onRemove ? (
         <div className="mt-4 flex justify-end">
-          <button
-            type="button"
+          <ResumeStudioButton
             onClick={onRemove}
-            className="rounded-full border border-[rgba(155,44,44,0.2)] px-3 py-1.5 text-xs font-medium text-[#9b2c2c]"
+            size="compact"
+            variant="dangerOutline"
           >
             {removeLabel}
-          </button>
+          </ResumeStudioButton>
         </div>
       ) : null}
     </>
