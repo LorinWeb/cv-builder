@@ -62,7 +62,7 @@ function PageMainContent({ className, ...props }: PageMainContentProps) {
         'min-w-0 box-border w-full max-[640px]:col-auto max-[640px]:border-0 max-[640px]:px-0',
         getMainContentColumnClassName(layout),
         layout.hasLeftSidebar && 'border-l border-l-(--color-main-border) pl-5',
-        layout.hasRightSidebar && 'border-r border-r-(--color-main-border) pr-5',
+        layout.hasRightSidebar && 'border-r border-r-(--color-main-border) pr-8',
         className
       )}
       {...props}

@@ -94,6 +94,7 @@ export interface ResumeVersionSummary {
   createdAt: string;
   id: number;
   isActive: boolean;
+  isPublished: boolean;
   name: string;
   updatedAt: string;
 }
@@ -104,8 +105,13 @@ export interface ResumeStudioState {
   canEdit: boolean;
   draft: ResumeSourceData | null;
   draftUpdatedAt: string | null;
+  hasUnpublishedChanges: boolean;
+  isActiveVersionPublished: boolean;
   isInitialized: boolean;
   isWizardCompatible: boolean;
+  publishedDraft: ResumeSourceData | null;
+  publishedVersionId: number | null;
+  publishedVersionName: string | null;
   source: ResumeStudioSource;
   versions: ResumeVersionSummary[];
   warnings: ResumeStudioWarning[];

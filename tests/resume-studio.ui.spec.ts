@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { AddressInfo } from 'node:net';
 import { createServer, type InlineConfig, type ViteDevServer } from 'vite';
 
@@ -32,6 +32,10 @@ async function replaceEditorParagraphs(editor: Locator, paragraphs: string[]) {
       await editor.press('Enter');
     }
   }
+}
+
+function autosaveStatus(page: Page) {
+  return page.getByTestId('resume-studio-autosave-status');
 }
 
 test.describe.serial('Resume Studio dev flow', () => {
@@ -134,9 +138,7 @@ test.describe.serial('Resume Studio dev flow', () => {
     );
     await page.getByTestId('resume-studio-remove-photo').click();
     await expect(page.getByTestId('resume-studio-photo-preview')).toHaveCount(0);
-    await expect(page.getByTestId('resume-studio-autosave-status')).toHaveText(
-      'All changes saved.'
-    );
+    await expect(autosaveStatus(page)).toHaveText('Draft saved locally and published.');
 
     await page.getByTestId('resume-studio-field-basics-name').fill('Jane Template');
     await page.getByLabel('Title').fill('Staff Engineer');
@@ -162,12 +164,8 @@ test.describe.serial('Resume Studio dev flow', () => {
     await expect(previewFrame.getByTestId('profile-subtitle')).toHaveText('Staff Engineer');
     await expect(previewSummaryBody.locator('strong')).toHaveText('engineering');
     await expect(previewSummaryBody.locator('ul li')).toHaveText(['Guides execution']);
-    await expect(page.getByTestId('resume-studio-autosave-status')).toHaveText(
-      'Changes pending…'
-    );
-    await expect(page.getByTestId('resume-studio-autosave-status')).toHaveText(
-      'All changes saved.'
-    );
+    await expect(autosaveStatus(page)).toHaveText('Local changes pending…');
+    await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
 
     await expect(page.getByTestId('profile-title')).toHaveText('Jane Template');
     await expect(page.getByTestId('profile-subtitle')).toHaveText('Staff Engineer');
@@ -200,9 +198,7 @@ test.describe.serial('Resume Studio dev flow', () => {
         .getByTestId('work-experience-highlights')
         .getByRole('link', { name: 'design system' })
     ).toBeVisible();
-    await expect(page.getByTestId('resume-studio-autosave-status')).toHaveText(
-      'All changes saved.'
-    );
+    await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
     await expect(page.locator('[data-testid="work-experience-item"] strong')).toHaveText(
       'platform'
     );
@@ -237,9 +233,7 @@ test.describe.serial('Resume Studio dev flow', () => {
         .getByTestId('work-progression-group')
         .getByRole('link', { name: 'trading platform' })
     ).toBeVisible();
-    await expect(page.getByTestId('resume-studio-autosave-status')).toHaveText(
-      'All changes saved.'
-    );
+    await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
 
     await progressionGroup.getByRole('button', { name: 'Add role to progression' }).click();
     await expect(progressionGroup.getByTestId('resume-studio-work-group-role')).toHaveCount(2);
@@ -249,9 +243,7 @@ test.describe.serial('Resume Studio dev flow', () => {
     await secondProgressionRole.getByRole('textbox', { name: 'Role' }).fill('Senior Engineer');
     await secondProgressionRole.getByRole('button', { name: 'Remove role' }).click();
     await expect(progressionGroup.getByTestId('resume-studio-work-group-role')).toHaveCount(1);
-    await expect(page.getByTestId('resume-studio-autosave-status')).toHaveText(
-      'All changes saved.'
-    );
+    await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
     await expect(
       page.getByTestId('work-progression-group').getByText('Grouped Systems')
     ).toBeVisible();
@@ -301,9 +293,7 @@ test.describe.serial('Resume Studio dev flow', () => {
     await expect(page.getByTestId('skill-category-item').locator('strong')).toHaveText(
       'Architecture'
     );
-    await expect(page.getByTestId('resume-studio-autosave-status')).toHaveText(
-      'All changes saved.'
-    );
+    await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
 
     await page.getByRole('button', { name: 'Education' }).click();
     await page.getByRole('button', { name: 'Add education entry' }).click();
@@ -316,14 +306,17 @@ test.describe.serial('Resume Studio dev flow', () => {
       contentEditable(page.getByTestId('resume-studio-dialog')),
       'Distributed systems'
     );
-    await expect(page.getByTestId('resume-studio-autosave-status')).toHaveText(
-      'All changes saved.'
-    );
+    await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
 
     await page.getByTestId('resume-studio-see-versions').click();
     await expect(page.getByTestId('resume-studio-versions')).toContainText(
       'Primary resume'
     );
+    const primaryVersionItem = page.getByTestId('resume-studio-version-item-1');
+
+    await expect(primaryVersionItem).toContainText('Published');
+    await expect(primaryVersionItem).toContainText('Editing');
+    await expect(primaryVersionItem).toContainText('Unpublished changes');
     await page.getByTestId('resume-studio-version-name').fill('Staff CV');
     await page.getByTestId('resume-studio-create-version').click();
     await expect(
@@ -335,9 +328,7 @@ test.describe.serial('Resume Studio dev flow', () => {
     await expect(previewFrame.getByTestId('profile-subtitle')).toHaveText(
       'Principal Engineer'
     );
-    await expect(page.getByTestId('resume-studio-autosave-status')).toHaveText(
-      'All changes saved.'
-    );
+    await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
     await expect(page.getByTestId('profile-subtitle')).toHaveText('Principal Engineer');
 
     await page.getByTestId('resume-studio-see-versions').click();
@@ -350,8 +341,13 @@ test.describe.serial('Resume Studio dev flow', () => {
     await expect(
       previewFrame.getByTestId('work-progression-group').getByText('Grouped Systems')
     ).toBeVisible();
-
     await page.getByTestId('resume-studio-see-versions').click();
+    await expect(page.getByTestId('resume-studio-version-item-1')).toContainText('Published');
+    await expect(page.getByTestId('resume-studio-version-item-1')).toContainText('Editing');
+    await expect(page.getByTestId('resume-studio-version-item-1')).toContainText(
+      'Unpublished changes'
+    );
+
     await page
       .getByTestId('resume-studio-version-item-2')
       .getByRole('button', { name: 'Edit version' })
@@ -361,6 +357,17 @@ test.describe.serial('Resume Studio dev flow', () => {
     );
     await expect(page.getByTestId('profile-subtitle')).toHaveText('Principal Engineer');
     await expect(page.getByTestId('work-progression-group').getByText('Grouped Systems')).toBeVisible();
+    await page.getByTestId('resume-studio-see-versions').click();
+    await expect(page.getByTestId('resume-studio-version-item-1')).toContainText('Published');
+    await expect(page.getByTestId('resume-studio-version-item-2')).toContainText('Editing');
+    await expect(page.getByTestId('resume-studio-version-item-2')).toContainText(
+      'Unpublished changes'
+    );
+
+    await page.getByTestId('resume-studio-back-to-edit').click();
+    await page.getByTestId('resume-studio-publish').click();
+    await expect(page.getByText('Staff CV published to src/data/resume.private.json.')).toBeVisible();
+    await expect(autosaveStatus(page)).toHaveText('Draft saved locally and published.');
 
     await page.getByTestId('resume-studio-see-versions').click();
     await expect(
@@ -368,6 +375,8 @@ test.describe.serial('Resume Studio dev flow', () => {
         .getByTestId('resume-studio-version-item-2')
         .getByRole('button', { name: 'Delete' })
     ).toHaveCount(0);
+    await expect(page.getByTestId('resume-studio-version-item-2')).toContainText('Published');
+    await expect(page.getByTestId('resume-studio-version-item-2')).toContainText('Editing');
     await page
       .getByTestId('resume-studio-version-item-1')
       .getByRole('button', { name: 'Delete' })
@@ -376,5 +385,42 @@ test.describe.serial('Resume Studio dev flow', () => {
     await expect(page.getByTestId('resume-studio-version-item-1')).toHaveCount(0);
     await page.getByTestId('resume-studio-back-to-edit').click();
     await expect(page.getByTestId('profile-subtitle')).toHaveText('Principal Engineer');
+    await page.getByRole('button', { name: 'Close' }).click();
+    await expect(page.getByTestId('profile-subtitle')).toHaveText('Principal Engineer');
+  });
+
+  test('closing without publish reverts the page, and publishing keeps the selected version live', async ({
+    page,
+  }) => {
+    await page.goto(`http://127.0.0.1:${devServerPort}`);
+    await page.waitForLoadState('networkidle');
+
+    await page.getByTestId('resume-studio-launcher').click();
+    await expect(page.getByTestId('resume-studio-dialog')).toBeVisible();
+    const publishedSubtitle = await page.getByLabel('Title').inputValue();
+
+    await expect(page.getByTestId('profile-subtitle')).toHaveText(publishedSubtitle);
+
+    await page.getByLabel('Title').fill('Architect Engineer');
+    await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
+    await expect(page.getByTestId('profile-subtitle')).toHaveText('Architect Engineer');
+
+    await page.getByRole('button', { name: 'Close' }).click();
+    await expect(page.getByTestId('resume-studio-dialog')).toHaveCount(0);
+    await expect(page.getByTestId('profile-subtitle')).toHaveText(publishedSubtitle!);
+
+    await page.getByTestId('resume-studio-launcher').click();
+    await expect(page.getByTestId('resume-studio-dialog')).toBeVisible();
+    await expect(page.getByLabel('Title')).toHaveValue('Architect Engineer');
+
+    await page.getByTestId('resume-studio-publish').click();
+    await expect(
+      page.getByText(/published to src\/data\/resume\.private\.json\.$/)
+    ).toBeVisible();
+    await expect(autosaveStatus(page)).toHaveText('Draft saved locally and published.');
+
+    await page.getByRole('button', { name: 'Close' }).click();
+    await expect(page.getByTestId('resume-studio-dialog')).toHaveCount(0);
+    await expect(page.getByTestId('profile-subtitle')).toHaveText('Architect Engineer');
   });
 });

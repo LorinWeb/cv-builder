@@ -72,8 +72,7 @@ function ProfileSection({
         >
           <h1
             data-testid="profile-title"
-            className="text-(--color-primary)"
-            style={{ lineHeight: 1.2, marginBottom: '6px' }}
+            className="text-(--color-primary) my-0"
           >
             {profileData.name}
           </h1>
@@ -98,7 +97,7 @@ function ProfileSection({
               <li
                 key={item.key}
                 data-testid={`profile-contact-${item.key}`}
-                className="list-none leading-[1.4] text-(--color-secondary)"
+                className="list-none text-(--color-secondary)"
               >
                 {item.href ? (
                   <a
@@ -121,7 +120,7 @@ function ProfileSection({
           {isAvailable && !isPdfRenderTarget ? (
             <li
               data-testid="profile-download"
-              className="list-none leading-[1.4] text-(--color-primary) print:hidden"
+              className="list-none text-(--color-primary) print:hidden"
             >
               <a
                 href={href}

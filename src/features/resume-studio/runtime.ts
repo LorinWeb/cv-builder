@@ -142,6 +142,12 @@ export function createResumeStudioVersion(
   });
 }
 
+export function publishResumeStudioVersion() {
+  return requestJson<ResumeStudioState>('/publish', {
+    method: 'POST',
+  });
+}
+
 export function deleteResumeStudioVersion(versionId: number) {
   return requestJson<ResumeStudioState>(`/versions/${versionId}`, {
     method: 'DELETE',

@@ -15,8 +15,16 @@ interface VersionRecord {
   data_json: string;
   id: number;
   is_active?: number;
+  is_published?: number;
   name: string;
   updated_at: string;
+}
+
+interface MetaRecord {
+  active_version_id: number | null;
+  published_data_json: string | null;
+  published_updated_at: string | null;
+  published_version_id: number | null;
 }
 
 export class SqliteResumeStudioStore {
@@ -47,6 +55,31 @@ export class SqliteResumeStudioStore {
     };
   }
 
+  getMeta() {
+    const record = this.database
+      .prepare(
+        `
+          SELECT
+            active_version_id,
+            published_version_id,
+            published_data_json,
+            published_updated_at
+          FROM resume_studio_meta
+          WHERE id = 1
+        `
+      )
+      .get() as MetaRecord | undefined;
+
+    return (
+      record || {
+        active_version_id: null,
+        published_data_json: null,
+        published_updated_at: null,
+        published_version_id: null,
+      }
+    );
+  }
+
   listVersions(): ResumeVersionSummary[] {
     const records = this.database
       .prepare(
@@ -61,7 +94,13 @@ export class SqliteResumeStudioStore {
                 SELECT active_version_id FROM resume_studio_meta WHERE id = 1
               ) THEN 1
               ELSE 0
-            END AS is_active
+            END AS is_active,
+            CASE
+              WHEN resume_versions.id = (
+                SELECT published_version_id FROM resume_studio_meta WHERE id = 1
+              ) THEN 1
+              ELSE 0
+            END AS is_published
           FROM resume_versions
           ORDER BY is_active DESC, datetime(updated_at) DESC, id DESC
         `
@@ -72,6 +111,7 @@ export class SqliteResumeStudioStore {
       createdAt: record.created_at,
       id: record.id,
       isActive: Boolean(record.is_active),
+      isPublished: Boolean(record.is_published),
       name: record.name,
       updatedAt: record.updated_at,
     }));
@@ -128,6 +168,33 @@ export class SqliteResumeStudioStore {
     };
   }
 
+  getPublishedState() {
+    const meta = this.getMeta();
+
+    if (
+      meta.published_version_id === null ||
+      !meta.published_data_json ||
+      !meta.published_updated_at
+    ) {
+      return null;
+    }
+
+    const version = this.database
+      .prepare('SELECT id, name FROM resume_versions WHERE id = ?')
+      .get(meta.published_version_id) as Pick<VersionRecord, 'id' | 'name'> | undefined;
+
+    if (!version) {
+      return null;
+    }
+
+    return {
+      data: JSON.parse(meta.published_data_json) as ResumeSourceData,
+      id: version.id,
+      name: version.name,
+      updatedAt: meta.published_updated_at,
+    };
+  }
+
   updateVersion(id: number, data: ResumeSourceData, updatedAt: string) {
     this.database
       .prepare(
@@ -171,7 +238,7 @@ export class SqliteResumeStudioStore {
     }
   }
 
-  setActiveVersion(id: number) {
+  setActiveVersion(id: number | null) {
     this.database
       .prepare(
         `
@@ -182,5 +249,30 @@ export class SqliteResumeStudioStore {
         `
       )
       .run(id);
+  }
+
+  setPublishedVersion(id: number, data: ResumeSourceData, updatedAt: string) {
+    this.database
+      .prepare(
+        `
+          INSERT INTO resume_studio_meta (
+            id,
+            active_version_id,
+            published_version_id,
+            published_data_json,
+            published_updated_at
+          )
+          VALUES (1, NULL, @published_version_id, @published_data_json, @published_updated_at)
+          ON CONFLICT(id) DO UPDATE SET
+            published_version_id = excluded.published_version_id,
+            published_data_json = excluded.published_data_json,
+            published_updated_at = excluded.published_updated_at
+        `
+      )
+      .run({
+        published_data_json: JSON.stringify(data),
+        published_updated_at: updatedAt,
+        published_version_id: id,
+      });
   }
 }

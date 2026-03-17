@@ -48,7 +48,7 @@ function renderHighlights(highlights?: TextValue[]) {
 
   return (
     <div data-testid="work-experience-highlights">
-      <ul className="mt-0 list-square pl-5 font-light leading-[1.3em]">
+      <ul className="mt-0 list-square pl-5 font-light">
         {highlights.map((highlight, index) => (
           <li key={index}>
             <ResumeMarkdown markdown={getTextValueSource(highlight)} mode="inline" />
@@ -67,7 +67,7 @@ function renderSingleWorkItem(item: ResumeWorkEntry, className?: string) {
       data-testid="work-experience-item"
       className={joinClassNames('mb-5 mt-3.75', className)}
     >
-      <h3 className="mb-0 flex flex-wrap items-baseline gap-1 font-medium leading-[1.3] text-(--color-primary)">
+      <h3 className="mb-0 flex flex-wrap items-baseline gap-1 font-medium text-(--color-primary)">
         {position}
         <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
           <span className="font-light text-(--color-secondary)">@</span>
@@ -78,7 +78,7 @@ function renderSingleWorkItem(item: ResumeWorkEntry, className?: string) {
         {formatDateRangeWithDuration(startDate, endDate)}
       </p>
       <ResumeMarkdown
-        className="my-[0.5em] mb-0 leading-[1.3em]"
+        className="my-[0.5em] mb-0"
         markdown={summary}
         mode="block"
       />
@@ -94,14 +94,14 @@ function renderProgressionEntry(entry: ResumeWorkEntry) {
       className={joinClassNames('mb-4.5 last:mb-0', getPrintClassNames(entry))}
       key={`${entry.company}-${entry.position}-${entry.startDate}`}
     >
-      <h4 className="mb-0 mt-2.5 flex flex-wrap items-baseline gap-1 font-medium leading-[1.3] text-(--color-primary)">
+      <h4 className="mb-0 mt-2.5 flex flex-wrap items-baseline gap-1 font-medium text-(--color-primary)">
         {entry.position}
       </h4>
       <p className="my-[0.5em] mt-0 block text-[0.85em]">
         {formatDateRangeWithDuration(entry.startDate, entry.endDate)}
       </p>
       <ResumeMarkdown
-        className="my-[0.5em] mb-0 leading-[1.3em]"
+        className="my-[0.5em] mb-0"
         markdown={entry.summary}
         mode="block"
       />
@@ -121,7 +121,7 @@ function renderProgressionGroup(item: ResumeWorkGroup, className?: string) {
       className={joinClassNames('mb-5.5 mt-4.5', className)}
     >
       <header className="mb-2.5">
-        <h3 className="m-0 font-medium leading-[1.3] text-(--color-secondary)">
+        <h3 className="m-0 font-medium text-(--color-secondary)">
           <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
             <span>@</span>
             <span>{companyName}</span>

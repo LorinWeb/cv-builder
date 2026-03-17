@@ -7,9 +7,11 @@ interface ResumeStudioVersionsTabProps {
   activeVersionId: number | null;
   canCreateVersion: boolean;
   createVersionName: string;
+  hasUnpublishedChanges: boolean;
   isCreatingVersion: boolean;
   isDeletingVersionId: number | null;
   isSelectingVersionId: number | null;
+  publishedVersionId: number | null;
   onCreateVersionNameChange: (value: string) => void;
   onCreateVersion: () => void;
   onDeleteVersion: (versionId: number) => void;
@@ -21,9 +23,11 @@ export function ResumeStudioVersionsTab({
   activeVersionId,
   canCreateVersion,
   createVersionName,
+  hasUnpublishedChanges,
   isCreatingVersion,
   isDeletingVersionId,
   isSelectingVersionId,
+  publishedVersionId,
   onCreateVersion,
   onCreateVersionNameChange,
   onDeleteVersion,
@@ -74,9 +78,19 @@ export function ResumeStudioVersionsTab({
                 <div>
                   <p className="m-0 flex items-center gap-2 text-sm font-medium text-(--color-primary)">
                     <span>{version.name}</span>
-                    {version.isActive ? (
+                    {version.id === publishedVersionId ? (
+                      <span className="rounded-full bg-[rgba(12,94,78,0.12)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#0c5e4e]">
+                        Published
+                      </span>
+                    ) : null}
+                    {version.id === activeVersionId ? (
                       <span className="rounded-full bg-[rgba(1,135,65,0.12)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-(--color-primary)">
-                        Active
+                        Editing
+                      </span>
+                    ) : null}
+                    {version.id === activeVersionId && hasUnpublishedChanges ? (
+                      <span className="rounded-full bg-[rgba(176,76,18,0.12)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8a470d]">
+                        Unpublished changes
                       </span>
                     ) : null}
                   </p>
@@ -104,7 +118,7 @@ export function ResumeStudioVersionsTab({
                         ? 'Opening…'
                         : 'Edit version'}
                   </button>
-                  {!version.isActive ? (
+                  {!version.isPublished ? (
                     <button
                       type="button"
                       onClick={() => onDeleteVersion(version.id)}

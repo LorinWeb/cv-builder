@@ -7,6 +7,7 @@ import { RESUME_STUDIO_AUTOSAVE_DELAY_MS } from '../constants';
 import {
   createResumeStudioVersion,
   deleteResumeStudioVersion,
+  publishResumeStudioVersion,
   publishResumeStudioPreview,
   ResumeStudioApiError,
   saveResumeStudioDraft,
@@ -103,6 +104,7 @@ export function ResumeStudioDialog({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [createVersionName, setCreateVersionName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [isCreatingVersion, setIsCreatingVersion] = useState(false);
   const [isDeletingVersionId, setIsDeletingVersionId] = useState<number | null>(null);
   const [isSelectingVersionId, setIsSelectingVersionId] = useState<number | null>(null);
@@ -129,14 +131,18 @@ export function ResumeStudioDialog({
   const previewData =
     state.draft && liveDraft ? applyResumeStudioDraft(state.draft, liveDraft) : null;
   const autosaveStatusLabel = errorMessage
-    ? 'Autosave needs attention.'
+    ? 'Local save needs attention.'
     : isSaving
-      ? 'Saving changes…'
+      ? 'Saving draft locally…'
       : hasUnsavedChanges
-        ? 'Changes pending…'
-        : 'All changes saved.';
+        ? 'Local changes pending…'
+        : state.hasUnpublishedChanges
+          ? 'Draft saved locally. Publish when ready.'
+          : state.isActiveVersionPublished
+            ? 'Draft saved locally and published.'
+            : 'Editing a saved version. Publish when ready.';
   const saveDraftValues = useEffectEvent(
-    async (values: ResumeStudioDraft, announceSuccess: boolean) => {
+    async (values: ResumeStudioDraft) => {
       setErrorMessage(null);
       setIsSaving(true);
 
@@ -149,12 +155,7 @@ export function ResumeStudioDialog({
         form.clearErrors();
         lastSavedDraftSignatureRef.current = serializeResumeStudioDraft(savedDraft);
         onStateChange(nextState);
-
-        if (announceSuccess) {
-          setStatusMessage(
-            `${nextState.activeVersionName || 'Current version'} saved and synced to src/data/resume.private.json.`
-          );
-        }
+        return nextState;
       } catch (error) {
         if (error instanceof ResumeStudioApiError && error.fieldErrors) {
           for (const [fieldName, message] of Object.entries(error.fieldErrors)) {
@@ -168,6 +169,7 @@ export function ResumeStudioDialog({
         setErrorMessage(
           error instanceof Error ? error.message : 'Could not save the version.'
         );
+        return null;
       } finally {
         setIsSaving(false);
       }
@@ -205,7 +207,7 @@ export function ResumeStudioDialog({
   }, [currentStep]);
 
   useEffect(() => {
-    if (!state.draft) {
+    if (!open || !state.draft) {
       return;
     }
 
@@ -218,7 +220,7 @@ export function ResumeStudioDialog({
         )
       )
     );
-  }, [form, liveDraftSignature, state.activeVersionId, state.draft, state.draftUpdatedAt]);
+  }, [form, liveDraftSignature, open, state.activeVersionId, state.draft, state.draftUpdatedAt]);
 
   useEffect(() => {
     if (
@@ -229,7 +231,8 @@ export function ResumeStudioDialog({
       isSaving ||
       isCreatingVersion ||
       isDeletingVersionId !== null ||
-      isSelectingVersionId !== null
+      isSelectingVersionId !== null ||
+      isPublishing
     ) {
       return;
     }
@@ -239,8 +242,7 @@ export function ResumeStudioDialog({
         mergeResumeStudioDraft(
           toResumeStudioDraft(state.draft!),
           form.getValues() as Partial<ResumeStudioDraft>
-        ),
-        false
+        )
       );
     }, RESUME_STUDIO_AUTOSAVE_DELAY_MS);
 
@@ -251,6 +253,7 @@ export function ResumeStudioDialog({
     hasUnsavedChanges,
     isCreatingVersion,
     isDeletingVersionId,
+    isPublishing,
     isSaving,
     isSelectingVersionId,
     liveDraftSignature,
@@ -266,12 +269,24 @@ export function ResumeStudioDialog({
     return null;
   }
 
+  const canPublish =
+    !hasUnsavedChanges &&
+    !isSaving &&
+    !isPublishing &&
+    (!state.isActiveVersionPublished || state.hasUnpublishedChanges);
+  const publishButtonLabel =
+    isPublishing
+      ? 'Publishing…'
+      : state.isActiveVersionPublished && !state.hasUnpublishedChanges
+        ? 'Published'
+        : 'Publish';
+
   async function handleCreateVersion() {
     setErrorMessage(null);
     setStatusMessage(null);
 
     if (hasUnsavedChanges) {
-      setErrorMessage('Wait for the current version to finish saving before creating another one.');
+      setErrorMessage('Wait for the current draft to finish saving before creating another version.');
       return;
     }
 
@@ -303,7 +318,7 @@ export function ResumeStudioDialog({
     setIsSelectingVersionId(versionId);
 
     if (hasUnsavedChanges) {
-      setErrorMessage('Wait for the current version to finish saving before switching to another one.');
+      setErrorMessage('Wait for the current draft to finish saving before switching to another version.');
       setIsSelectingVersionId(null);
       return;
     }
@@ -343,6 +358,34 @@ export function ResumeStudioDialog({
     }
   }
 
+  async function handlePublishVersion() {
+    setErrorMessage(null);
+    setStatusMessage(null);
+
+    if (hasUnsavedChanges || isSaving) {
+      setErrorMessage('Wait for the current draft to finish saving before publishing.');
+      return;
+    }
+
+    setIsPublishing(true);
+
+    try {
+      const nextState = await publishResumeStudioVersion();
+
+      onStateChange(nextState);
+      publishResumeStudioPreview(nextState.draft!);
+      setStatusMessage(
+        `${nextState.activeVersionName || 'Current version'} published to src/data/resume.private.json.`
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : 'Could not publish the selected version.'
+      );
+    } finally {
+      setIsPublishing(false);
+    }
+  }
+
   async function handleUploadPhoto(file: File) {
     setErrorMessage(null);
     setStatusMessage(null);
@@ -355,7 +398,7 @@ export function ResumeStudioDialog({
       });
 
       form.setValue('basics.photoSrc', nextPhoto.src, { shouldDirty: true });
-      setStatusMessage('Portrait uploaded. Resume Studio will save it automatically.');
+      setStatusMessage('Portrait uploaded. Resume Studio will save it locally.');
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : 'Could not upload the portrait.'
@@ -365,8 +408,37 @@ export function ResumeStudioDialog({
     }
   }
 
+  async function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
+      onOpenChange(true);
+      return;
+    }
+
+    let nextState = state;
+
+    if (hasUnsavedChanges) {
+      const savedState = await saveDraftValues(
+        mergeResumeStudioDraft(
+          toResumeStudioDraft(state.draft!),
+          form.getValues() as Partial<ResumeStudioDraft>
+        )
+      );
+
+      if (!savedState) {
+        return;
+      }
+
+      nextState = savedState;
+    }
+
+    publishResumeStudioPreview(nextState.publishedDraft || nextState.draft!);
+    setActiveTab('edit');
+    onStateChange(nextState);
+    onOpenChange(false);
+  }
+
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-50 bg-[rgba(18,40,35,0.48)] backdrop-blur-[2px]" />
         <Dialog.Popup
@@ -417,9 +489,11 @@ export function ResumeStudioDialog({
                     activeVersionId={state.activeVersionId}
                     canCreateVersion={!hasUnsavedChanges && !isSaving}
                     createVersionName={createVersionName}
+                    hasUnpublishedChanges={state.hasUnpublishedChanges}
                     isCreatingVersion={isCreatingVersion}
                     isDeletingVersionId={isDeletingVersionId}
                     isSelectingVersionId={isSelectingVersionId}
+                    publishedVersionId={state.publishedVersionId}
                     onCreateVersion={handleCreateVersion}
                     onCreateVersionNameChange={setCreateVersionName}
                     onDeleteVersion={handleDeleteVersion}
@@ -448,14 +522,25 @@ export function ResumeStudioDialog({
 
               <div className="flex flex-wrap gap-2">
                 {activeTab === 'edit' ? (
-                  <button
-                    data-testid="resume-studio-see-versions"
-                    type="button"
-                    onClick={() => setActiveTab('versions')}
-                    className="rounded-full border border-(--color-header-border) bg-white px-4 py-2 text-sm font-medium text-(--color-primary)"
-                  >
-                    Manage Saved Versions
-                  </button>
+                  <>
+                    <button
+                      data-testid="resume-studio-publish"
+                      type="button"
+                      onClick={handlePublishVersion}
+                      disabled={!canPublish}
+                      className="rounded-full bg-(--color-primary) px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {publishButtonLabel}
+                    </button>
+                    <button
+                      data-testid="resume-studio-see-versions"
+                      type="button"
+                      onClick={() => setActiveTab('versions')}
+                      className="rounded-full border border-(--color-header-border) bg-white px-4 py-2 text-sm font-medium text-(--color-primary)"
+                    >
+                      Manage Saved Versions
+                    </button>
+                  </>
                 ) : (
                   <button
                     data-testid="resume-studio-back-to-edit"

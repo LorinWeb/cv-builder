@@ -59,6 +59,12 @@ function withTempProject(callback: (projectRoot: string) => void) {
   }
 }
 
+function readPrivateResume(projectRoot: string) {
+  return JSON.parse(
+    readFileSync(path.join(projectRoot, 'src/data/resume.private.json'), 'utf8')
+  ) as typeof MINIMAL_RESUME;
+}
+
 test('initializes the database from an existing private resume file', async () => {
   withTempProject((projectRoot) => {
     writeProjectFile(
@@ -77,16 +83,22 @@ test('initializes the database from an existing private resume file', async () =
     expect(state.draft?.basics.name).toBe('John Doe');
     expect(state.versions[0]?.name).toBe(RESUME_STUDIO_DEFAULT_IMPORTED_VERSION_NAME);
     expect(state.versions[0]?.isActive).toBeTruthy();
+    expect(state.versions[0]?.isPublished).toBeTruthy();
+    expect(state.publishedVersionName).toBe(RESUME_STUDIO_DEFAULT_IMPORTED_VERSION_NAME);
     expect(existsSync(databasePath)).toBeTruthy();
 
     store.close();
   });
 });
 
-test('saving the active version rewrites src/data/resume.private.json', async () => {
+test('saving the active version stays local until the version is published', async () => {
   withTempProject((projectRoot) => {
     const store = createResumeStudioStore(projectRoot);
     const initializedState = store.initializeDraft();
+    const initialPrivateFile = readFileSync(
+      path.join(projectRoot, 'src/data/resume.private.json'),
+      'utf8'
+    );
 
     expect(initializedState.isInitialized).toBeTruthy();
 
@@ -98,12 +110,18 @@ test('saving the active version rewrites src/data/resume.private.json', async ()
       },
     });
 
-    const savedFile = JSON.parse(
-      readFileSync(path.join(projectRoot, 'src/data/resume.private.json'), 'utf8')
-    ) as typeof MINIMAL_RESUME;
-
     expect(savedState.draft?.basics.name).toBe('Jane Doe');
-    expect(savedFile.basics.name).toBe('Jane Doe');
+    expect(savedState.hasUnpublishedChanges).toBeTruthy();
+    expect(
+      readFileSync(path.join(projectRoot, 'src/data/resume.private.json'), 'utf8')
+    ).toBe(initialPrivateFile);
+
+    const publishedState = store.publishActiveVersion();
+    const publishedFile = readPrivateResume(projectRoot);
+
+    expect(publishedState.hasUnpublishedChanges).toBeFalsy();
+    expect(publishedState.isActiveVersionPublished).toBeTruthy();
+    expect(publishedFile.basics.name).toBe('Jane Doe');
 
     store.close();
   });
@@ -155,7 +173,37 @@ test('creates and edits multiple named versions independently', async () => {
   });
 });
 
-test('deletes inactive versions but never the active version', async () => {
+test('selecting another version does not rewrite src/data/resume.private.json', async () => {
+  withTempProject((projectRoot) => {
+    const store = createResumeStudioStore(projectRoot);
+    const initializedState = store.initializeDraft();
+    const publishedPrivateFile = readFileSync(
+      path.join(projectRoot, 'src/data/resume.private.json'),
+      'utf8'
+    );
+
+    const secondVersionState = store.createVersion('Consulting CV');
+    const primaryVersionId = initializedState.activeVersionId!;
+
+    store.saveDraft({
+      ...secondVersionState.draft!,
+      basics: {
+        ...secondVersionState.draft!.basics,
+        label: 'Consulting Engineer',
+      },
+    });
+    const selectedState = store.selectVersion(primaryVersionId);
+
+    expect(selectedState.activeVersionId).toBe(primaryVersionId);
+    expect(
+      readFileSync(path.join(projectRoot, 'src/data/resume.private.json'), 'utf8')
+    ).toBe(publishedPrivateFile);
+
+    store.close();
+  });
+});
+
+test('deletes unpublished versions but never the published version', async () => {
   withTempProject((projectRoot) => {
     const store = createResumeStudioStore(projectRoot);
     const initializedState = store.initializeDraft();
@@ -163,14 +211,38 @@ test('deletes inactive versions but never the active version', async () => {
     const secondVersionState = store.createVersion('Consulting CV');
     const secondVersionId = secondVersionState.activeVersionId!;
 
+    expect(() => store.deleteVersion(primaryVersionId)).toThrow(
+      'Cannot delete the published version.'
+    );
+
+    const deletedState = store.deleteVersion(secondVersionId);
+
+    expect(deletedState.activeVersionId).toBe(primaryVersionId);
+    expect(deletedState.versions).toHaveLength(1);
+    expect(deletedState.versions[0]?.id).toBe(primaryVersionId);
+
+    store.close();
+  });
+});
+
+test('publishing another version transfers the delete protection to that version', async () => {
+  withTempProject((projectRoot) => {
+    const store = createResumeStudioStore(projectRoot);
+    const initializedState = store.initializeDraft();
+    const primaryVersionId = initializedState.activeVersionId!;
+    const secondVersionState = store.createVersion('Consulting CV');
+    const secondVersionId = secondVersionState.activeVersionId!;
+
+    const publishedState = store.publishActiveVersion();
+
+    expect(publishedState.publishedVersionId).toBe(secondVersionId);
+    expect(publishedState.isActiveVersionPublished).toBeTruthy();
+
     const deletedState = store.deleteVersion(primaryVersionId);
 
-    expect(deletedState.activeVersionId).toBe(secondVersionId);
-    expect(deletedState.versions).toHaveLength(1);
-    expect(deletedState.versions[0]?.id).toBe(secondVersionId);
-
+    expect(deletedState.versions.some((version) => version.id === primaryVersionId)).toBeFalsy();
     expect(() => store.deleteVersion(secondVersionId)).toThrow(
-      'Cannot delete the active version.'
+      'Cannot delete the published version.'
     );
 
     store.close();
@@ -218,9 +290,9 @@ test('preserves unsupported sections when saving, versioning, and switching', as
 
     expect(selectedState.draft?.languages?.[0]?.name).toBe('English');
 
-    const savedFile = JSON.parse(
-      readFileSync(path.join(projectRoot, 'src/data/resume.private.json'), 'utf8')
-    ) as { languages?: Array<{ name: string }> };
+    const savedFile = readPrivateResume(projectRoot) as typeof MINIMAL_RESUME & {
+      languages?: Array<{ name: string }>;
+    };
 
     expect(savedFile.languages?.[0]?.name).toBe('English');
 
@@ -342,15 +414,15 @@ test('imports grouped work and preserves it across saves and version switches', 
     expect(savedWorkItem).toBeDefined();
     expect(savedWorkItem && 'progression' in savedWorkItem).toBeTruthy();
     expect(savedWorkItem && 'progression' in savedWorkItem && savedWorkItem.company).toBe(
-      'Placeholder Labs Europe'
+      'Placeholder Labs'
     );
     expect(
       savedWorkItem && 'progression' in savedWorkItem
         ? savedWorkItem.progression[0]
         : null
     ).toMatchObject({
-      company: 'Placeholder Labs Europe',
-      position: 'Principal Product Engineer',
+      company: 'Placeholder Labs',
+      position: 'Lead Product Engineer',
     });
 
     store.close();

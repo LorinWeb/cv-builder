@@ -67,7 +67,7 @@ function App({ data, isResumeStudioPreview = false }: AppProps) {
             {impactData.length > 0 && (
               <ResumeSection items={impactData} title="Selected Achievements">
                 {({ getItemClassName, items }) => (
-                  <ul className="mt-2 list-square pl-5 text-[1em] font-light leading-[1.35]">
+                  <ul className="mt-2 list-square pl-5 text-[1em] font-light">
                     {items.map((item, index) => (
                       <AchievementItem
                         key={index}

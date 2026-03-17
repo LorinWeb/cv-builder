@@ -56,7 +56,7 @@ export function ResumeMarkdown({
           </code>
         ),
         em: ({ children }) => <em>{children}</em>,
-        li: ({ children }) => <li className="font-light leading-[1.4em]">{children}</li>,
+        li: ({ children }) => <li className="font-light">{children}</li>,
         ol: ({ children }) => <ol className="my-[0.5em] list-decimal pl-5">{children}</ol>,
         p: ({ children }) => <p className="m-0 mb-2.5 last:mb-0">{children}</p>,
         strong: ({ children }) => <strong className="font-medium">{children}</strong>,

@@ -110,6 +110,14 @@ export function resumeStudioPlugin(projectRoot: string): Plugin {
 
       if (
         request.method === 'POST' &&
+        url.pathname === `${RESUME_STUDIO_API_ROOT}/publish`
+      ) {
+        sendJson(response, 200, store.publishActiveVersion());
+        return;
+      }
+
+      if (
+        request.method === 'POST' &&
         url.pathname === `${RESUME_STUDIO_API_ROOT}/versions`
       ) {
         const payload = await readJsonBody<ResumeStudioCreateVersionPayload>(request);
