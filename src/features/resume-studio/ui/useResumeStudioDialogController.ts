@@ -1,8 +1,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
-import { useForm, useWatch, type Path } from 'react-hook-form';
+import { useForm, type Path } from 'react-hook-form';
 
 import { applyResumeStudioDraft, toResumeStudioDraft } from '../draft';
-import { RESUME_STUDIO_AUTOSAVE_DELAY_MS } from '../constants';
 import {
   createResumeStudioVersion,
   deleteResumeStudioVersion,
@@ -14,6 +13,11 @@ import {
   uploadResumeStudioPhoto,
 } from '../runtime';
 import type { ResumeStudioDraft, ResumeStudioState, ResumeStudioStepId } from '../types';
+import {
+  mergeResumeStudioDraft,
+  serializeResumeStudioDraft,
+  useResumeStudioDraftSync,
+} from './useResumeStudioDraftSync';
 
 type ResumeStudioDialogTab = 'edit' | 'versions';
 
@@ -59,33 +63,6 @@ function readSessionStep() {
   return (storedValue as ResumeStudioStepId) || 'basics';
 }
 
-function serializeResumeStudioDraft(draft: ResumeStudioDraft) {
-  return JSON.stringify(draft);
-}
-
-function mergeResumeStudioDraft(
-  source: ResumeStudioDraft,
-  patch: Partial<ResumeStudioDraft>
-): ResumeStudioDraft {
-  const nextBasics = {
-    ...source.basics,
-  };
-
-  for (const [key, value] of Object.entries(patch.basics || {})) {
-    if (value !== undefined) {
-      nextBasics[key as keyof ResumeStudioDraft['basics']] = value;
-    }
-  }
-
-  return {
-    basics: nextBasics,
-    education: patch.education ?? source.education,
-    impact: patch.impact ?? source.impact,
-    skills: patch.skills ?? source.skills,
-    work: patch.work ?? source.work,
-  };
-}
-
 function getAutosaveStatusLabel({
   errorMessage,
   hasUnsavedChanges,
@@ -129,7 +106,6 @@ export function useResumeStudioDialogController({
   const form = useForm<ResumeStudioDraft>({
     defaultValues: state.draft ? toResumeStudioDraft(state.draft) : undefined,
   });
-  const watchedDraft = useWatch({ control: form.control });
   const [activeTab, setActiveTab] = useState<ResumeStudioDialogTab>('edit');
   const [currentStep, setCurrentStep] = useState<ResumeStudioStepId>(readSessionStep);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -141,31 +117,29 @@ export function useResumeStudioDialogController({
   const [isDeletingVersionId, setIsDeletingVersionId] = useState<number | null>(null);
   const [isSelectingVersionId, setIsSelectingVersionId] = useState<number | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const lastSavedDraftSignatureRef = useRef<string | null>(null);
   const persistedDraft = state.draft ? toResumeStudioDraft(state.draft) : null;
-
-  void watchedDraft;
-  const liveDraft = persistedDraft
-    ? mergeResumeStudioDraft(persistedDraft, form.getValues() as Partial<ResumeStudioDraft>)
-    : null;
-  const liveDraftSignature = liveDraft ? serializeResumeStudioDraft(liveDraft) : null;
-
-  if (!lastSavedDraftSignatureRef.current && persistedDraft) {
-    lastSavedDraftSignatureRef.current = serializeResumeStudioDraft(persistedDraft);
-  }
-
-  const hasUnsavedChanges = Boolean(
-    liveDraftSignature && liveDraftSignature !== lastSavedDraftSignatureRef.current
+  const lastSavedDraftSignatureRef = useRef<string | null>(
+    persistedDraft ? serializeResumeStudioDraft(persistedDraft) : null
   );
-  const previewData =
-    state.draft && liveDraft ? applyResumeStudioDraft(state.draft, liveDraft) : null;
+  const liveDraftRef = useRef<ResumeStudioDraft | null>(persistedDraft);
+  const liveDraftSignatureRef = useRef<string | null>(
+    persistedDraft ? serializeResumeStudioDraft(persistedDraft) : null
+  );
+  const persistedDraftRef = useRef<ResumeStudioDraft | null>(persistedDraft);
+  const sourceDraftRef = useRef(state.draft);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const previewData = state.draft;
   const autosaveStatusLabel = getAutosaveStatusLabel({
     errorMessage,
     hasUnsavedChanges,
     isSaving,
     state,
   });
-  const canCreateVersion = !hasUnsavedChanges && !isSaving;
+  const canCreateVersion =
+    !isSaving &&
+    !isCreatingVersion &&
+    isDeletingVersionId === null &&
+    isSelectingVersionId === null;
   const canPublish =
     !hasUnsavedChanges &&
     !isSaving &&
@@ -179,17 +153,34 @@ export function useResumeStudioDialogController({
         : 'Publish';
 
   const saveDraftValues = useEffectEvent(async (values: ResumeStudioDraft) => {
+    const sourceDraft = sourceDraftRef.current;
+
+    if (!sourceDraft) {
+      return null;
+    }
+
     setErrorMessage(null);
     setIsSaving(true);
 
     try {
       const nextState = await saveResumeStudioDraft({
-        draft: applyResumeStudioDraft(state.draft!, values),
+        draft: applyResumeStudioDraft(sourceDraft, values),
       });
       const savedDraft = toResumeStudioDraft(nextState.draft!);
+      const nextLiveDraft = mergeResumeStudioDraft(
+        savedDraft,
+        form.getValues() as Partial<ResumeStudioDraft>
+      );
+      const savedDraftSignature = serializeResumeStudioDraft(savedDraft);
+      const nextLiveDraftSignature = serializeResumeStudioDraft(nextLiveDraft);
 
       form.clearErrors();
-      lastSavedDraftSignatureRef.current = serializeResumeStudioDraft(savedDraft);
+      sourceDraftRef.current = nextState.draft;
+      persistedDraftRef.current = savedDraft;
+      liveDraftRef.current = nextLiveDraft;
+      liveDraftSignatureRef.current = nextLiveDraftSignature;
+      lastSavedDraftSignatureRef.current = savedDraftSignature;
+      setHasUnsavedChanges(nextLiveDraftSignature !== savedDraftSignature);
       onStateChange(nextState);
       return nextState;
     } catch (error) {
@@ -211,24 +202,25 @@ export function useResumeStudioDialogController({
     }
   });
 
-  useEffect(() => {
-    if (!state.draft) {
-      lastSavedDraftSignatureRef.current = null;
-      return;
-    }
-
-    const nextDraft = toResumeStudioDraft(state.draft);
-    const nextDraftSignature = serializeResumeStudioDraft(nextDraft);
-    const currentDraftSignature = serializeResumeStudioDraft(
-      mergeResumeStudioDraft(nextDraft, form.getValues() as Partial<ResumeStudioDraft>)
-    );
-
-    lastSavedDraftSignatureRef.current = nextDraftSignature;
-
-    if (nextDraftSignature !== currentDraftSignature) {
-      form.reset(nextDraft);
-    }
-  }, [form, state.activeVersionId, state.draft, state.draftUpdatedAt]);
+  const scheduleStructuralDraftSync = useResumeStudioDraftSync({
+    form,
+    hasUnsavedChanges,
+    isAutosavePaused:
+      isSaving ||
+      isCreatingVersion ||
+      isDeletingVersionId !== null ||
+      isSelectingVersionId !== null ||
+      isPublishing,
+    lastSavedDraftSignatureRef,
+    liveDraftRef,
+    liveDraftSignatureRef,
+    onAutosaveDraft: saveDraftValues,
+    open,
+    persistedDraftRef,
+    setHasUnsavedChanges,
+    sourceDraftRef,
+    state,
+  });
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -238,78 +230,22 @@ export function useResumeStudioDialogController({
     window.sessionStorage.setItem('resume-studio-step', currentStep);
   }, [currentStep]);
 
-  useEffect(() => {
-    if (!open || !state.draft) {
-      return;
-    }
-
-    publishResumeStudioPreview(
-      applyResumeStudioDraft(
-        state.draft,
-        mergeResumeStudioDraft(
-          toResumeStudioDraft(state.draft),
-          form.getValues() as Partial<ResumeStudioDraft>
-        )
-      )
-    );
-  }, [form, liveDraftSignature, open, state.activeVersionId, state.draft, state.draftUpdatedAt]);
-
-  useEffect(() => {
-    if (
-      !open ||
-      !state.draft ||
-      !liveDraftSignature ||
-      !hasUnsavedChanges ||
-      isSaving ||
-      isCreatingVersion ||
-      isDeletingVersionId !== null ||
-      isSelectingVersionId !== null ||
-      isPublishing
-    ) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      const sourceDraft = state.draft;
-
-      if (!sourceDraft) {
-        return;
-      }
-
-      void saveDraftValues(
-        mergeResumeStudioDraft(
-          toResumeStudioDraft(sourceDraft),
-          form.getValues() as Partial<ResumeStudioDraft>
-        )
-      );
-    }, RESUME_STUDIO_AUTOSAVE_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [
-    hasUnsavedChanges,
-    isCreatingVersion,
-    isDeletingVersionId,
-    isPublishing,
-    isSaving,
-    isSelectingVersionId,
-    liveDraftSignature,
-    open,
-    form,
-    saveDraftValues,
-    state.activeVersionId,
-    state.draft,
-    state.draftUpdatedAt,
-  ]);
-
   async function handleCreateVersion() {
     setErrorMessage(null);
     setStatusMessage(null);
 
     if (hasUnsavedChanges) {
-      setErrorMessage('Wait for the current draft to finish saving before creating another version.');
-      return;
+      const liveDraft = liveDraftRef.current;
+
+      if (!liveDraft) {
+        return;
+      }
+
+      const savedState = await saveDraftValues(liveDraft);
+
+      if (!savedState) {
+        return;
+      }
     }
 
     setIsCreatingVersion(true);
@@ -408,6 +344,28 @@ export function useResumeStudioDialogController({
     }
   }
 
+  async function handleOpenVersionsTab() {
+    if (isSaving || isCreatingVersion || isDeletingVersionId !== null || isSelectingVersionId !== null) {
+      return;
+    }
+
+    if (hasUnsavedChanges) {
+      const liveDraft = liveDraftRef.current;
+
+      if (!liveDraft) {
+        return;
+      }
+
+      const savedState = await saveDraftValues(liveDraft);
+
+      if (!savedState) {
+        return;
+      }
+    }
+
+    setActiveTab('versions');
+  }
+
   async function handleUploadPhoto(file: File) {
     setErrorMessage(null);
     setStatusMessage(null);
@@ -439,16 +397,13 @@ export function useResumeStudioDialogController({
     let nextState = state;
 
     if (hasUnsavedChanges) {
-      if (!persistedDraft) {
+      const liveDraft = liveDraftRef.current;
+
+      if (!persistedDraft || !liveDraft) {
         return;
       }
 
-      const savedState = await saveDraftValues(
-        mergeResumeStudioDraft(
-          persistedDraft,
-          form.getValues() as Partial<ResumeStudioDraft>
-        )
-      );
+      const savedState = await saveDraftValues(liveDraft);
 
       if (!savedState) {
         return;
@@ -475,6 +430,7 @@ export function useResumeStudioDialogController({
     handleCreateVersion,
     handleDeleteVersion,
     handleOpenStateChange,
+    handleOpenVersionsTab,
     handlePublishVersion,
     handleSelectVersion,
     handleUploadPhoto,
@@ -487,6 +443,7 @@ export function useResumeStudioDialogController({
     setActiveTab,
     setCreateVersionName,
     setCurrentStep,
+    scheduleStructuralDraftSync,
     statusMessage,
   };
 }

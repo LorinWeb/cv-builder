@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useFormContext, type Path } from 'react-hook-form';
 
 import { ListItemsEditor } from '../ListItemsEditor';
@@ -14,7 +15,7 @@ interface ResumeStudioWorkRoleFieldsProps {
   removeLabel?: string;
 }
 
-export function ResumeStudioWorkRoleFields({
+export const ResumeStudioWorkRoleFields = memo(function ResumeStudioWorkRoleFields({
   basePath,
   includeCompanyField = true,
   includeWebsiteField = false,
@@ -100,4 +101,4 @@ export function ResumeStudioWorkRoleFields({
       ) : null}
     </>
   );
-}
+});

@@ -17,6 +17,7 @@ export function ResumeStudioBasicsStep({
   onUploadPhoto,
 }: ResumeStudioBasicsStepProps) {
   const { setValue, watch } = useFormContext<ResumeStudioDraft>();
+  const photoInputId = 'resume-studio-photo-input';
   const name = watch('basics.name');
   const photoSrc = watch('basics.photoSrc');
   const photoPreviewAlt = `${name?.trim() || 'Profile'} photo`;
@@ -65,11 +66,16 @@ export function ResumeStudioBasicsStep({
       <ResumeStudioSectionCard title="Portrait">
         <div className="rounded-3xl border border-dashed border-[rgba(74,127,122,0.25)] bg-[rgba(242,246,241,0.76)] p-4">
           <div className="flex flex-wrap items-center gap-3">
-            <label className="inline-flex cursor-pointer items-center rounded-full bg-(--color-primary) px-4 py-2 text-sm font-medium text-white">
+            <label
+              htmlFor={photoInputId}
+              className="inline-flex cursor-pointer items-center rounded-full bg-(--color-primary) px-4 py-2 text-sm font-medium text-white"
+            >
               {isUploadingPhoto ? 'Uploading…' : 'Upload Photo'}
               <input
                 data-testid="resume-studio-photo-input"
                 className="sr-only"
+                id={photoInputId}
+                name="resume-studio-photo-file"
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 onChange={handlePhotoChange}

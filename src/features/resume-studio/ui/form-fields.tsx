@@ -21,10 +21,14 @@ interface ResumeStudioFieldFrameProps {
   children: ReactNode;
   containerClassName?: string;
   description?: string;
+  descriptionId?: string;
   errorMessage?: string;
+  errorMessageId?: string;
   hideLabel?: boolean;
   invalid?: boolean;
   label: string;
+  labelId?: string;
+  labelMode?: 'field' | 'plain';
   name: Path<ResumeStudioDraft>;
   rootClassName?: string;
 }
@@ -33,13 +37,48 @@ export function ResumeStudioFieldFrame({
   children,
   containerClassName,
   description,
+  descriptionId,
   errorMessage,
+  errorMessageId,
   hideLabel = false,
   invalid = false,
   label,
+  labelId,
+  labelMode = 'field',
   name,
   rootClassName,
 }: ResumeStudioFieldFrameProps) {
+  if (labelMode === 'plain') {
+    return (
+      <div className={rootClassName}>
+        <div className={joinClassNames('flex flex-col gap-1.5', containerClassName)}>
+          <p
+            id={labelId}
+            className={
+              hideLabel ? 'sr-only' : 'text-sm font-medium text-(--color-primary)'
+            }
+          >
+            {label}
+          </p>
+          {children}
+          {description ? (
+            <p
+              id={descriptionId}
+              className="text-xs leading-5 text-(--color-secondary)"
+            >
+              {description}
+            </p>
+          ) : null}
+          {errorMessage ? (
+            <p id={errorMessageId} className="text-xs font-medium text-[#9b2c2c]">
+              {errorMessage}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Field.Root className={rootClassName} invalid={invalid} name={name}>
       <div className={joinClassNames('flex flex-col gap-1.5', containerClassName)}>

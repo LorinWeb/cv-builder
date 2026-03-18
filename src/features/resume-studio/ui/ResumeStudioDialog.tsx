@@ -5,6 +5,7 @@ import type { ResumeStudioState } from '../types';
 import { ResumeStudioEditTab } from './ResumeStudioEditTab';
 import { ResumeStudioPreviewFrame } from './ResumeStudioPreviewFrame';
 import { ResumeStudioVersionsTab } from './ResumeStudioVersionsTab';
+import { ResumeStudioStructuralSyncProvider } from './draft-sync-context';
 import { ResumeStudioButton } from './primitives';
 import { useResumeStudioDialogController } from './useResumeStudioDialogController';
 
@@ -33,6 +34,7 @@ export function ResumeStudioDialog({
     handleCreateVersion,
     handleDeleteVersion,
     handleOpenStateChange,
+    handleOpenVersionsTab,
     handlePublishVersion,
     handleSelectVersion,
     handleUploadPhoto,
@@ -42,6 +44,7 @@ export function ResumeStudioDialog({
     isUploadingPhoto,
     previewData,
     publishButtonLabel,
+    scheduleStructuralDraftSync,
     setActiveTab,
     setCreateVersionName,
     setCurrentStep,
@@ -95,12 +98,14 @@ export function ResumeStudioDialog({
               <div className="min-w-0">
                 {activeTab === 'edit' ? (
                   <FormProvider {...form}>
-                    <ResumeStudioEditTab
-                      currentStep={currentStep}
-                      isUploadingPhoto={isUploadingPhoto}
-                      onStepChange={setCurrentStep}
-                      onUploadPhoto={handleUploadPhoto}
-                    />
+                    <ResumeStudioStructuralSyncProvider value={scheduleStructuralDraftSync}>
+                      <ResumeStudioEditTab
+                        currentStep={currentStep}
+                        isUploadingPhoto={isUploadingPhoto}
+                        onStepChange={setCurrentStep}
+                        onUploadPhoto={handleUploadPhoto}
+                      />
+                    </ResumeStudioStructuralSyncProvider>
                   </FormProvider>
                 ) : (
                   <ResumeStudioVersionsTab
@@ -149,7 +154,7 @@ export function ResumeStudioDialog({
                     </ResumeStudioButton>
                     <ResumeStudioButton
                       data-testid="resume-studio-see-versions"
-                      onClick={() => setActiveTab('versions')}
+                      onClick={handleOpenVersionsTab}
                     >
                       Manage Saved Versions
                     </ResumeStudioButton>

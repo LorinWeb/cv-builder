@@ -20,20 +20,41 @@ if (!container) {
 const root = createRoot(container);
 const resumeStudioPreviewMode = isResumeStudioPreviewMode();
 
-function syncDocumentHead(data: ResumeRuntimeData) {
-  document.title = getDocumentTitle(data);
+function syncDocumentTitle(data: ResumeRuntimeData) {
+  try {
+    document.title = getDocumentTitle(data);
+  } catch {
+    if (!document.title.trim()) {
+      document.title = 'Resume';
+    }
+  }
+}
 
+function syncMetaDescription(data: ResumeRuntimeData) {
   let metaDescription = document.head.querySelector<HTMLMetaElement>(
     'meta[name="description"]'
   );
 
-  if (!metaDescription) {
-    metaDescription = document.createElement('meta');
-    metaDescription.name = 'description';
-    document.head.append(metaDescription);
-  }
+  try {
+    const content = getMetaDescription(data);
 
-  metaDescription.content = getMetaDescription(data);
+    if (!metaDescription) {
+      metaDescription = document.createElement('meta');
+      metaDescription.name = 'description';
+      document.head.append(metaDescription);
+    }
+
+    metaDescription.content = content;
+  } catch {
+    if (metaDescription && !metaDescription.content.trim()) {
+      metaDescription.remove();
+    }
+  }
+}
+
+function syncDocumentHead(data: ResumeRuntimeData) {
+  syncDocumentTitle(data);
+  syncMetaDescription(data);
 }
 
 function renderApp(data: ResumeRuntimeData) {

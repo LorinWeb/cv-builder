@@ -1,22 +1,24 @@
+import { memo } from 'react';
+
 import { ResumeStudioCard } from '../primitives';
 import { ResumeStudioWorkRoleFields } from './ResumeStudioWorkRoleFields';
 
 interface ResumeStudioStandaloneWorkCardProps {
   index: number;
-  onRemove: () => void;
+  removeRole: (index?: number | number[]) => void;
 }
 
-export function ResumeStudioStandaloneWorkCard({
+export const ResumeStudioStandaloneWorkCard = memo(function ResumeStudioStandaloneWorkCard({
   index,
-  onRemove,
+  removeRole,
 }: ResumeStudioStandaloneWorkCardProps) {
   return (
     <ResumeStudioCard data-testid="resume-studio-work-role">
       <ResumeStudioWorkRoleFields
         basePath={`work.${index}`}
         includeWebsiteField
-        onRemove={onRemove}
+        onRemove={() => removeRole(index)}
       />
     </ResumeStudioCard>
   );
-}
+});

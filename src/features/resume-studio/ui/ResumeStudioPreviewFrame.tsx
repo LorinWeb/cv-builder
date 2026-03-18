@@ -4,6 +4,7 @@ import type { ResumeSourceData } from '../../../data/types/resume';
 import {
   createResumeStudioPreviewMessage,
   getResumeStudioPreviewUrl,
+  RESUME_STUDIO_PREVIEW_EVENT,
 } from '../runtime';
 import {
   RESUME_STUDIO_PREVIEW_FRAME_HEIGHT,
@@ -30,9 +31,23 @@ export function ResumeStudioPreviewFrame({
 }: ResumeStudioPreviewFrameProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
+  const latestDataRef = useRef(data);
   const [frameUrl] = useState(getResumeStudioPreviewUrl);
   const [scale, setScale] = useState(1);
   const [isFrameLoaded, setIsFrameLoaded] = useState(false);
+
+  function postPreviewMessage(nextData: ResumeSourceData) {
+    const frameWindow = frameRef.current?.contentWindow;
+
+    if (!frameWindow) {
+      return;
+    }
+
+    frameWindow.postMessage(
+      createResumeStudioPreviewMessage(nextData),
+      window.location.origin
+    );
+  }
 
   useEffect(() => {
     const container = containerRef.current;
@@ -57,15 +72,42 @@ export function ResumeStudioPreviewFrame({
   }, []);
 
   useEffect(() => {
-    if (!isFrameLoaded || !frameRef.current?.contentWindow) {
+    latestDataRef.current = data;
+
+    if (!isFrameLoaded) {
       return;
     }
 
-    frameRef.current.contentWindow.postMessage(
-      createResumeStudioPreviewMessage(data),
-      window.location.origin
-    );
+    postPreviewMessage(data);
   }, [data, isFrameLoaded]);
+
+  useEffect(() => {
+    if (!isFrameLoaded) {
+      return;
+    }
+
+    postPreviewMessage(latestDataRef.current);
+  }, [isFrameLoaded]);
+
+  useEffect(() => {
+    function handlePreviewEvent(event: Event) {
+      const previewEvent = event as CustomEvent<ResumeSourceData>;
+
+      latestDataRef.current = previewEvent.detail;
+
+      if (!isFrameLoaded) {
+        return;
+      }
+
+      postPreviewMessage(previewEvent.detail);
+    }
+
+    window.addEventListener(RESUME_STUDIO_PREVIEW_EVENT, handlePreviewEvent);
+
+    return () => {
+      window.removeEventListener(RESUME_STUDIO_PREVIEW_EVENT, handlePreviewEvent);
+    };
+  }, [isFrameLoaded]);
 
   return (
     <aside className="rounded-[28px] border border-[rgba(74,127,122,0.14)] bg-[rgba(247,250,247,0.94)] p-4 shadow-[0_28px_60px_-44px_rgba(11,37,31,0.45)]">

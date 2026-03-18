@@ -1,22 +1,25 @@
+import { memo } from 'react';
 import { X } from 'lucide-react';
 import { useFieldArray, useFormContext, useWatch, type Path } from 'react-hook-form';
 
 import { createEmptyResumeStudioProgressionRoleDraft } from '../../draft-factories';
 import type { ResumeStudioDraft } from '../../types';
+import { useResumeStudioStructuralSync } from '../draft-sync-context';
 import { ResumeStudioInputField } from '../form-fields';
 import { ResumeStudioButton, ResumeStudioCard } from '../primitives';
 import { ResumeStudioWorkRoleFields } from './ResumeStudioWorkRoleFields';
 
 interface ResumeStudioProgressionGroupCardProps {
   index: number;
-  onRemove: () => void;
+  removeGroup: (index?: number | number[]) => void;
 }
 
-export function ResumeStudioProgressionGroupCard({
+export const ResumeStudioProgressionGroupCard = memo(function ResumeStudioProgressionGroupCard({
   index,
-  onRemove,
+  removeGroup,
 }: ResumeStudioProgressionGroupCardProps) {
   const { control } = useFormContext<ResumeStudioDraft>();
+  const scheduleStructuralSync = useResumeStudioStructuralSync();
   const progressionPath = `work.${index}.progression` as const;
   const watchedCompany = useWatch({
     control,
@@ -35,7 +38,10 @@ export function ResumeStudioProgressionGroupCard({
     >
       <ResumeStudioButton
         aria-label={`Remove progression group ${index + 1}`}
-        onClick={onRemove}
+        onClick={() => {
+          removeGroup(index);
+          scheduleStructuralSync();
+        }}
         size="icon"
         variant="dangerSolid"
         className="absolute right-4 top-4"
@@ -75,7 +81,10 @@ export function ResumeStudioProgressionGroupCard({
               </h5>
               {fields.length > 1 ? (
                 <ResumeStudioButton
-                  onClick={() => remove(roleIndex)}
+                  onClick={() => {
+                    remove(roleIndex);
+                    scheduleStructuralSync();
+                  }}
                   size="compact"
                   variant="dangerOutline"
                 >
@@ -94,13 +103,14 @@ export function ResumeStudioProgressionGroupCard({
 
       <div className="mt-4">
         <ResumeStudioButton
-          onClick={() =>
-            append(createEmptyResumeStudioProgressionRoleDraft(groupCompany.trim()))
-          }
+          onClick={() => {
+            append(createEmptyResumeStudioProgressionRoleDraft(groupCompany.trim()));
+            scheduleStructuralSync();
+          }}
         >
           Add role to progression
         </ResumeStudioButton>
       </div>
     </ResumeStudioCard>
   );
-}
+});

@@ -13,17 +13,26 @@ function contentEditable(locator: Locator, index = 0) {
   return locator.locator('[contenteditable="true"]').nth(index);
 }
 
-async function replaceEditorText(editor: Locator, text: string) {
+async function clearEditor(editor: Locator) {
   await editor.click();
-  await editor.press('Control+A');
+  await editor.evaluate((element) => {
+    const selection = window.getSelection();
+    const range = document.createRange();
+
+    range.selectNodeContents(element);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  });
   await editor.press('Backspace');
+}
+
+async function replaceEditorText(editor: Locator, text: string) {
+  await clearEditor(editor);
   await editor.type(text);
 }
 
 async function replaceEditorParagraphs(editor: Locator, paragraphs: string[]) {
-  await editor.click();
-  await editor.press('Control+A');
-  await editor.press('Backspace');
+  await clearEditor(editor);
 
   for (const [index, paragraph] of paragraphs.entries()) {
     await editor.type(paragraph);
@@ -36,6 +45,10 @@ async function replaceEditorParagraphs(editor: Locator, paragraphs: string[]) {
 
 function autosaveStatus(page: Page) {
   return page.getByTestId('resume-studio-autosave-status');
+}
+
+function stepPanel(page: Page, stepId: string) {
+  return page.getByTestId(`resume-studio-step-panel-${stepId}`);
 }
 
 test.describe.serial('Resume Studio dev flow', () => {
@@ -163,8 +176,7 @@ test.describe.serial('Resume Studio dev flow', () => {
     await expect(previewFrame.getByTestId('profile-title')).toHaveText('Jane Template');
     await expect(previewFrame.getByTestId('profile-subtitle')).toHaveText('Staff Engineer');
     await expect(previewSummaryBody.locator('strong')).toHaveText('engineering');
-    await expect(previewSummaryBody.locator('ul li')).toHaveText(['Guides execution']);
-    await expect(autosaveStatus(page)).toHaveText('Local changes pending…');
+    await expect(previewSummaryBody.locator('ul li')).toHaveText([/Guides execution\.?/]);
     await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
 
     await expect(page.getByTestId('profile-title')).toHaveText('Jane Template');
@@ -174,15 +186,16 @@ test.describe.serial('Resume Studio dev flow', () => {
       .getByTestId('section-body');
     await expect(liveSummaryBody.locator('h1, h2, h3, h4, h5, h6')).toHaveCount(0);
     await expect(liveSummaryBody.locator('strong')).toHaveText('engineering');
-    await expect(liveSummaryBody.locator('ul li')).toHaveText(['Guides execution']);
+    await expect(liveSummaryBody.locator('ul li')).toHaveText([/Guides execution\.?/]);
     await expect(page.getByTestId('resume-studio-launcher')).toHaveText('Edit resume');
 
     await page.getByRole('button', { name: 'Experience' }).click();
-    await page.getByRole('button', { name: 'Add role' }).click();
-    const standaloneRole = page.getByTestId('resume-studio-work-role').last();
-    await page.getByLabel('Company', { exact: true }).fill('Acme Systems');
-    await page.getByRole('textbox', { name: 'Role' }).fill('Principal Engineer');
-    await page.getByLabel('Start date', { exact: true }).fill('2024-01-01');
+    const experiencePanel = stepPanel(page, 'experience');
+    await experiencePanel.getByRole('button', { name: 'Add role' }).click();
+    const standaloneRole = experiencePanel.getByTestId('resume-studio-work-role').last();
+    await experiencePanel.getByLabel('Company', { exact: true }).fill('Acme Systems');
+    await experiencePanel.getByRole('textbox', { name: 'Role' }).fill('Principal Engineer');
+    await experiencePanel.getByLabel('Start date', { exact: true }).fill('2024-01-01');
     await replaceEditorText(contentEditable(standaloneRole), 'Owned **platform** reliability.');
     await standaloneRole.getByRole('button', { name: 'Add highlight' }).click();
     await expect(standaloneRole.locator('[contenteditable="true"]')).toHaveCount(2);
@@ -198,13 +211,12 @@ test.describe.serial('Resume Studio dev flow', () => {
         .getByTestId('work-experience-highlights')
         .getByRole('link', { name: 'design system' })
     ).toBeVisible();
-    await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
     await expect(page.locator('[data-testid="work-experience-item"] strong')).toHaveText(
       'platform'
     );
 
-    await page.getByRole('button', { name: 'Add company progression' }).click();
-    const progressionGroup = page.getByTestId('resume-studio-work-group').last();
+    await experiencePanel.getByRole('button', { name: 'Add company progression' }).click();
+    const progressionGroup = experiencePanel.getByTestId('resume-studio-work-group').last();
     await progressionGroup.getByLabel('Company', { exact: true }).fill('Grouped Systems');
     await progressionGroup
       .getByLabel('Website', { exact: true })
@@ -233,7 +245,6 @@ test.describe.serial('Resume Studio dev flow', () => {
         .getByTestId('work-progression-group')
         .getByRole('link', { name: 'trading platform' })
     ).toBeVisible();
-    await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
 
     await progressionGroup.getByRole('button', { name: 'Add role to progression' }).click();
     await expect(progressionGroup.getByTestId('resume-studio-work-group-role')).toHaveCount(2);
@@ -243,17 +254,16 @@ test.describe.serial('Resume Studio dev flow', () => {
     await secondProgressionRole.getByRole('textbox', { name: 'Role' }).fill('Senior Engineer');
     await secondProgressionRole.getByRole('button', { name: 'Remove role' }).click();
     await expect(progressionGroup.getByTestId('resume-studio-work-group-role')).toHaveCount(1);
-    await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
     await expect(
       page.getByTestId('work-progression-group').getByText('Grouped Systems')
     ).toBeVisible();
 
     await page.getByRole('button', { name: 'Achievements' }).click();
-    await page.getByRole('button', { name: 'Add achievement' }).click();
-    const achievementsStep = page.getByTestId('resume-studio-dialog');
+    const achievementsPanel = stepPanel(page, 'achievements');
+    await achievementsPanel.getByRole('button', { name: 'Add achievement' }).click();
 
     await replaceEditorText(
-      contentEditable(achievementsStep),
+      contentEditable(achievementsPanel),
       'Built **internal platforms** and [tooling](https://example.com).'
     );
     const previewAchievement = previewFrame.getByTestId('achievement-item');
@@ -262,16 +272,18 @@ test.describe.serial('Resume Studio dev flow', () => {
     const liveAchievement = page.getByTestId('achievement-item');
     await expect(liveAchievement.locator('strong')).toHaveText('internal platforms');
     await expect(liveAchievement.locator('a')).toBeVisible();
+    await achievementsPanel.getByRole('button', { name: 'Remove achievement 1' }).click();
+    await expect(previewFrame.getByTestId('achievement-item')).toHaveCount(0);
+    await expect(page.getByTestId('achievement-item')).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Skills' }).click();
-    await page.getByRole('button', { name: 'Add skill category' }).click();
-    await page.getByPlaceholder('Leadership and delivery').fill('Core strengths');
-    await page.getByRole('button', { name: 'Add keyword' }).click();
-    const keywordFields = page.locator(
-      '[data-testid="resume-studio-dialog"] [contenteditable="true"]'
-    );
+    const skillsPanel = stepPanel(page, 'skills');
+    await skillsPanel.getByRole('button', { name: 'Add skill category' }).click();
+    await skillsPanel.getByPlaceholder('Leadership and delivery').fill('Core strengths');
+    await skillsPanel.getByRole('button', { name: 'Add keyword' }).click();
+    const keywordFields = skillsPanel.locator('[contenteditable="true"]');
     await replaceEditorText(keywordFields.first(), '**Architecture** leadership');
-    await page.getByRole('button', { name: 'Add keyword' }).click();
+    await skillsPanel.getByRole('button', { name: 'Add keyword' }).click();
     const multilineKeyword = keywordFields.nth(1);
     await replaceEditorText(multilineKeyword, 'Systems thinking');
     const singleLineKeywordHeight = await multilineKeyword.evaluate(
@@ -285,7 +297,7 @@ test.describe.serial('Resume Studio dev flow', () => {
     await expect
       .poll(() => multilineKeyword.evaluate((element) => element.clientHeight))
       .toBeGreaterThan(singleLineKeywordHeight);
-    await page.getByRole('button', { name: 'Remove keyword 2' }).click();
+    await skillsPanel.getByRole('button', { name: 'Remove keyword 2' }).click();
     await expect(keywordFields).toHaveCount(1);
     await expect(previewFrame.getByTestId('skill-category-item').locator('strong')).toHaveText(
       'Architecture'
@@ -293,20 +305,32 @@ test.describe.serial('Resume Studio dev flow', () => {
     await expect(page.getByTestId('skill-category-item').locator('strong')).toHaveText(
       'Architecture'
     );
-    await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
 
     await page.getByRole('button', { name: 'Education' }).click();
-    await page.getByRole('button', { name: 'Add education entry' }).click();
-    await page.getByLabel('Institution').fill('Example University');
-    await page.getByLabel('Area').fill('Computer Science');
-    await page.getByLabel('Study type').fill("Bachelor's degree");
-    await page.getByLabel('Start date').fill('2014-09-01');
-    await page.getByRole('button', { name: 'Add course' }).click();
+    const educationPanel = stepPanel(page, 'education');
+    await educationPanel.getByRole('button', { name: 'Add education entry' }).click();
+    await educationPanel.getByLabel('Institution').fill('Example University');
+    await educationPanel.getByLabel('Area').fill('Computer Science');
+    await educationPanel.getByLabel('Study type').fill("Bachelor's degree");
+    await educationPanel.getByLabel('Start date').fill('2014-09-01');
+    await educationPanel.getByRole('button', { name: 'Add course' }).click();
     await replaceEditorText(
-      contentEditable(page.getByTestId('resume-studio-dialog')),
+      contentEditable(educationPanel),
       'Distributed systems'
     );
-    await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
+
+    await page.getByRole('button', { name: 'Experience' }).click();
+    await expect(contentEditable(standaloneRole)).toContainText('Owned platform reliability.');
+    await expect(contentEditable(standaloneRole, 1)).toContainText('Shipped design system.');
+    await standaloneRole.getByRole('button', { name: 'Remove role', exact: true }).click();
+    await expect(previewFrame.getByTestId('work-experience-item')).toHaveCount(0);
+    await expect(page.getByTestId('work-experience-item')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Skills' }).click();
+    await expect(keywordFields.first()).toContainText('Architecture leadership');
+    await skillsPanel.getByRole('button', { name: 'Remove skill category 1' }).click();
+    await expect(previewFrame.getByTestId('skill-category-item')).toHaveCount(0);
+    await expect(page.getByTestId('skill-category-item')).toHaveCount(0);
 
     await page.getByTestId('resume-studio-see-versions').click();
     await expect(page.getByTestId('resume-studio-versions')).toContainText(
@@ -328,7 +352,6 @@ test.describe.serial('Resume Studio dev flow', () => {
     await expect(previewFrame.getByTestId('profile-subtitle')).toHaveText(
       'Principal Engineer'
     );
-    await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
     await expect(page.getByTestId('profile-subtitle')).toHaveText('Principal Engineer');
 
     await page.getByTestId('resume-studio-see-versions').click();

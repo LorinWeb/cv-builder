@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import { memo, useEffect, useState } from 'react';
 
 import type { ResumeStudioStepId } from '../types';
 import { ResumeStudioButton } from './primitives';
@@ -16,51 +16,76 @@ interface ResumeStudioEditTabProps {
   onUploadPhoto: (file: File) => Promise<void>;
 }
 
-type ResumeStudioStepDefinition = {
+const RESUME_STUDIO_STEP_DEFINITIONS: Array<{
   id: ResumeStudioStepId;
   label: string;
-  render: (
-    props: Pick<ResumeStudioEditTabProps, 'isUploadingPhoto' | 'onUploadPhoto'>
-  ) => ReactElement;
-};
-
-const RESUME_STUDIO_STEP_DEFINITIONS: ResumeStudioStepDefinition[] = [
-  {
-    id: 'basics',
-    label: 'Basics',
-    render: ({ isUploadingPhoto, onUploadPhoto }) => (
-      <ResumeStudioBasicsStep
-        isUploadingPhoto={isUploadingPhoto}
-        onUploadPhoto={onUploadPhoto}
-      />
-    ),
-  },
-  {
-    id: 'contacts',
-    label: 'Contacts',
-    render: () => <ResumeStudioContactsStep />,
-  },
-  {
-    id: 'achievements',
-    label: 'Achievements',
-    render: () => <ResumeStudioAchievementsStep />,
-  },
-  {
-    id: 'experience',
-    label: 'Experience',
-    render: () => <ResumeStudioExperienceStep />,
-  },
-  {
-    id: 'skills',
-    label: 'Skills',
-    render: () => <ResumeStudioSkillsStep />,
-  },
-  {
-    id: 'education',
-    label: 'Education',
-    render: () => <ResumeStudioEducationStep />,
-  },
+}> = [
+  { id: 'basics', label: 'Basics' },
+  { id: 'contacts', label: 'Contacts' },
+  { id: 'achievements', label: 'Achievements' },
+  { id: 'experience', label: 'Experience' },
+  { id: 'skills', label: 'Skills' },
+  { id: 'education', label: 'Education' },
 ];
+
+interface ResumeStudioStepPanelProps {
+  id: ResumeStudioStepId;
+  isActive: boolean;
+  isMounted: boolean;
+  isUploadingPhoto: boolean;
+  onUploadPhoto: (file: File) => Promise<void>;
+}
+
+const ResumeStudioStepPanel = memo(
+  function ResumeStudioStepPanel({
+    id,
+    isActive,
+    isMounted,
+    isUploadingPhoto,
+    onUploadPhoto,
+  }: ResumeStudioStepPanelProps) {
+    if (!isMounted) {
+      return null;
+    }
+
+    return (
+      <section
+        data-testid={`resume-studio-step-panel-${id}`}
+        hidden={!isActive}
+      >
+        {id === 'basics' ? (
+          <ResumeStudioBasicsStep
+            isUploadingPhoto={isUploadingPhoto}
+            onUploadPhoto={onUploadPhoto}
+          />
+        ) : null}
+        {id === 'contacts' ? <ResumeStudioContactsStep /> : null}
+        {id === 'achievements' ? <ResumeStudioAchievementsStep /> : null}
+        {id === 'experience' ? <ResumeStudioExperienceStep /> : null}
+        {id === 'skills' ? <ResumeStudioSkillsStep /> : null}
+        {id === 'education' ? <ResumeStudioEducationStep /> : null}
+      </section>
+    );
+  },
+  (previousProps, nextProps) => {
+    if (
+      previousProps.id !== nextProps.id ||
+      previousProps.isActive !== nextProps.isActive ||
+      previousProps.isMounted !== nextProps.isMounted
+    ) {
+      return false;
+    }
+
+    if (nextProps.id === 'basics') {
+      return (
+        previousProps.isUploadingPhoto === nextProps.isUploadingPhoto &&
+        previousProps.onUploadPhoto === nextProps.onUploadPhoto
+      );
+    }
+
+    return true;
+  }
+);
 
 export function ResumeStudioEditTab({
   currentStep,
@@ -68,9 +93,15 @@ export function ResumeStudioEditTab({
   onStepChange,
   onUploadPhoto,
 }: ResumeStudioEditTabProps) {
-  const currentStepDefinition =
-    RESUME_STUDIO_STEP_DEFINITIONS.find((step) => step.id === currentStep) ||
-    RESUME_STUDIO_STEP_DEFINITIONS[0];
+  const [mountedSteps, setMountedSteps] = useState<ResumeStudioStepId[]>(() => [currentStep]);
+
+  useEffect(() => {
+    setMountedSteps((currentMountedSteps) =>
+      currentMountedSteps.includes(currentStep)
+        ? currentMountedSteps
+        : [...currentMountedSteps, currentStep]
+    );
+  }, [currentStep]);
 
   return (
     <div className="space-y-5">
@@ -86,10 +117,16 @@ export function ResumeStudioEditTab({
         ))}
       </div>
 
-      {currentStepDefinition.render({
-        isUploadingPhoto,
-        onUploadPhoto,
-      })}
+      {RESUME_STUDIO_STEP_DEFINITIONS.map((step) => (
+        <ResumeStudioStepPanel
+          key={step.id}
+          id={step.id}
+          isActive={currentStep === step.id}
+          isMounted={mountedSteps.includes(step.id)}
+          isUploadingPhoto={isUploadingPhoto}
+          onUploadPhoto={onUploadPhoto}
+        />
+      ))}
     </div>
   );
 }

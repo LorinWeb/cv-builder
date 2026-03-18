@@ -2,6 +2,7 @@ import type {
   ButtonHTMLAttributes,
   ElementType,
   HTMLAttributes,
+  MouseEvent,
   ReactNode,
 } from 'react';
 import { forwardRef } from 'react';
@@ -55,6 +56,7 @@ export const ResumeStudioButton = forwardRef<
   {
     children,
     className,
+    onMouseDown,
     size = 'default',
     type = 'button',
     variant = 'secondary',
@@ -62,10 +64,25 @@ export const ResumeStudioButton = forwardRef<
   },
   ref
 ) {
+  function handleMouseDown(event: MouseEvent<HTMLButtonElement>) {
+    onMouseDown?.(event);
+
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      props.disabled
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+  }
+
   return (
     <button
       {...props}
       ref={ref}
+      onMouseDown={handleMouseDown}
       type={type}
       className={joinClassNames(
         RESUME_STUDIO_BUTTON_BASE_CLASS_NAME,

@@ -1,8 +1,10 @@
+import { memo } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useFieldArray, useFormContext, type FieldArrayPath, type Path } from 'react-hook-form';
 
 import { createEmptyResumeStudioTextDraft } from '../draft-factories';
 import type { ResumeStudioDraft } from '../types';
+import { useResumeStudioStructuralSync } from './draft-sync-context';
 import { TextEditor } from './TextEditor';
 import { ResumeStudioButton } from './primitives';
 
@@ -16,7 +18,7 @@ interface ListItemsEditorProps {
   placeholder: string;
 }
 
-export function ListItemsEditor({
+export const ListItemsEditor = memo(function ListItemsEditor({
   addLabel,
   emptyCopy,
   hideLabel = false,
@@ -26,6 +28,7 @@ export function ListItemsEditor({
   placeholder,
 }: ListItemsEditorProps) {
   const { control } = useFormContext<ResumeStudioDraft>();
+  const scheduleStructuralSync = useResumeStudioStructuralSync();
   const { append, fields, remove } = useFieldArray({
     control,
     name,
@@ -55,7 +58,10 @@ export function ListItemsEditor({
             />
             <ResumeStudioButton
               aria-label={`Remove ${itemLabel} ${index + 1}`}
-              onClick={() => remove(index)}
+              onClick={() => {
+                remove(index);
+                scheduleStructuralSync();
+              }}
               size="iconLarge"
               variant="dangerOutline"
               className="mt-1"
@@ -66,9 +72,14 @@ export function ListItemsEditor({
         ))}
       </div>
 
-      <ResumeStudioButton onClick={() => append(createEmptyResumeStudioTextDraft() as never)}>
+      <ResumeStudioButton
+        onClick={() => {
+          append(createEmptyResumeStudioTextDraft() as never);
+          scheduleStructuralSync();
+        }}
+      >
         {addLabel}
       </ResumeStudioButton>
     </div>
   );
-}
+});
