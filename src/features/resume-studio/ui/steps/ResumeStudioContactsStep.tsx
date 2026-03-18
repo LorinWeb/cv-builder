@@ -2,17 +2,17 @@ import { useFieldArray, useFormContext } from 'react-hook-form';
 
 import { createEmptyResumeStudioProfileDraft } from '../../draft-factories';
 import { ResumeStudioInputField, ResumeStudioSectionCard } from '../form-fields';
-import { useResumeStudioStructuralSync } from '../draft-sync-context';
+import { useResumeStudioFieldArrayStructuralSync } from '../draft-sync-context';
 import { ResumeStudioButton, ResumeStudioCard } from '../primitives';
 import type { ResumeStudioDraft } from '../../types';
 
 export function ResumeStudioContactsStep() {
   const { control } = useFormContext<ResumeStudioDraft>();
-  const scheduleStructuralSync = useResumeStudioStructuralSync();
   const { append, fields, remove } = useFieldArray({
     control,
     name: 'basics.profiles',
   });
+  useResumeStudioFieldArrayStructuralSync(fields);
 
   return (
     <div className="space-y-4">
@@ -82,10 +82,7 @@ export function ResumeStudioContactsStep() {
               </div>
               <div className="mt-3 flex justify-end">
                 <ResumeStudioButton
-                  onClick={() => {
-                    remove(index);
-                    scheduleStructuralSync();
-                  }}
+                  onClick={() => remove(index)}
                   size="compact"
                   variant="dangerOutline"
                 >
@@ -97,10 +94,7 @@ export function ResumeStudioContactsStep() {
         </div>
 
         <ResumeStudioButton
-          onClick={() => {
-            append(createEmptyResumeStudioProfileDraft());
-            scheduleStructuralSync();
-          }}
+          onClick={() => append(createEmptyResumeStudioProfileDraft())}
         >
           Add profile link
         </ResumeStudioButton>

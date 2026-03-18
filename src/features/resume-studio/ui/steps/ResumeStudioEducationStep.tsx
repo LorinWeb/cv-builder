@@ -1,7 +1,7 @@
 import { useFieldArray, useFormContext } from 'react-hook-form';
 
 import { createEmptyResumeStudioEducationDraft } from '../../draft-factories';
-import { useResumeStudioStructuralSync } from '../draft-sync-context';
+import { useResumeStudioFieldArrayStructuralSync } from '../draft-sync-context';
 import { ListItemsEditor } from '../ListItemsEditor';
 import { ResumeStudioInputField, ResumeStudioSectionCard } from '../form-fields';
 import { ResumeStudioButton, ResumeStudioCard } from '../primitives';
@@ -9,11 +9,11 @@ import type { ResumeStudioDraft } from '../../types';
 
 export function ResumeStudioEducationStep() {
   const { control } = useFormContext<ResumeStudioDraft>();
-  const scheduleStructuralSync = useResumeStudioStructuralSync();
   const { append, fields, remove } = useFieldArray({
     control,
     name: 'education',
   });
+  useResumeStudioFieldArrayStructuralSync(fields);
 
   return (
     <ResumeStudioSectionCard title="Education">
@@ -66,10 +66,7 @@ export function ResumeStudioEducationStep() {
             </div>
             <div className="mt-4 flex justify-end">
               <ResumeStudioButton
-                onClick={() => {
-                  remove(index);
-                  scheduleStructuralSync();
-                }}
+                onClick={() => remove(index)}
                 size="compact"
                 variant="dangerOutline"
               >
@@ -80,12 +77,7 @@ export function ResumeStudioEducationStep() {
         ))}
       </div>
 
-      <ResumeStudioButton
-        onClick={() => {
-          append(createEmptyResumeStudioEducationDraft());
-          scheduleStructuralSync();
-        }}
-      >
+      <ResumeStudioButton onClick={() => append(createEmptyResumeStudioEducationDraft())}>
         Add education entry
       </ResumeStudioButton>
     </ResumeStudioSectionCard>

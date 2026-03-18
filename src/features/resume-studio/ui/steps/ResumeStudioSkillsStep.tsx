@@ -4,7 +4,7 @@ import { useFieldArray, useFormContext } from 'react-hook-form';
 
 import { createEmptyResumeStudioSkillDraft } from '../../draft-factories';
 import { ListItemsEditor } from '../ListItemsEditor';
-import { useResumeStudioStructuralSync } from '../draft-sync-context';
+import { useResumeStudioFieldArrayStructuralSync } from '../draft-sync-context';
 import { ResumeStudioInputField, ResumeStudioSectionCard } from '../form-fields';
 import { ResumeStudioButton, ResumeStudioCard } from '../primitives';
 import type { ResumeStudioDraft } from '../../types';
@@ -56,11 +56,11 @@ const ResumeStudioSkillCategoryCard = memo(function ResumeStudioSkillCategoryCar
 
 export function ResumeStudioSkillsStep() {
   const { control } = useFormContext<ResumeStudioDraft>();
-  const scheduleStructuralSync = useResumeStudioStructuralSync();
   const { append, fields, remove } = useFieldArray({
     control,
     name: 'skills',
   });
+  useResumeStudioFieldArrayStructuralSync(fields);
 
   return (
     <ResumeStudioSectionCard title="Skills">
@@ -69,20 +69,12 @@ export function ResumeStudioSkillsStep() {
           <ResumeStudioSkillCategoryCard
             key={field.id}
             index={index}
-            removeSkill={(removeIndex) => {
-              remove(removeIndex);
-              scheduleStructuralSync();
-            }}
+            removeSkill={(removeIndex) => remove(removeIndex)}
           />
         ))}
       </div>
 
-      <ResumeStudioButton
-        onClick={() => {
-          append(createEmptyResumeStudioSkillDraft());
-          scheduleStructuralSync();
-        }}
-      >
+      <ResumeStudioButton onClick={() => append(createEmptyResumeStudioSkillDraft())}>
         Add skill category
       </ResumeStudioButton>
     </ResumeStudioSectionCard>

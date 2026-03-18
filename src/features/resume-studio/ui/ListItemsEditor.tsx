@@ -4,7 +4,7 @@ import { useFieldArray, useFormContext, type FieldArrayPath, type Path } from 'r
 
 import { createEmptyResumeStudioTextDraft } from '../draft-factories';
 import type { ResumeStudioDraft } from '../types';
-import { useResumeStudioStructuralSync } from './draft-sync-context';
+import { useResumeStudioFieldArrayStructuralSync } from './draft-sync-context';
 import { TextEditor } from './TextEditor';
 import { ResumeStudioButton } from './primitives';
 
@@ -28,11 +28,11 @@ export const ListItemsEditor = memo(function ListItemsEditor({
   placeholder,
 }: ListItemsEditorProps) {
   const { control } = useFormContext<ResumeStudioDraft>();
-  const scheduleStructuralSync = useResumeStudioStructuralSync();
   const { append, fields, remove } = useFieldArray({
     control,
     name,
   });
+  useResumeStudioFieldArrayStructuralSync(fields);
 
   return (
     <div className="space-y-3">
@@ -58,10 +58,7 @@ export const ListItemsEditor = memo(function ListItemsEditor({
             />
             <ResumeStudioButton
               aria-label={`Remove ${itemLabel} ${index + 1}`}
-              onClick={() => {
-                remove(index);
-                scheduleStructuralSync();
-              }}
+              onClick={() => remove(index)}
               size="iconLarge"
               variant="dangerOutline"
               className="mt-1"
@@ -73,10 +70,7 @@ export const ListItemsEditor = memo(function ListItemsEditor({
       </div>
 
       <ResumeStudioButton
-        onClick={() => {
-          append(createEmptyResumeStudioTextDraft() as never);
-          scheduleStructuralSync();
-        }}
+        onClick={() => append(createEmptyResumeStudioTextDraft() as never)}
       >
         {addLabel}
       </ResumeStudioButton>

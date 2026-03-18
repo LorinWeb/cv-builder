@@ -191,7 +191,7 @@ test.describe.serial('Resume Studio dev flow', () => {
 
     await page.getByRole('button', { name: 'Experience' }).click();
     const experiencePanel = stepPanel(page, 'experience');
-    await experiencePanel.getByRole('button', { name: 'Add role' }).click();
+    await experiencePanel.getByRole('button', { name: 'Add role', exact: true }).click();
     const standaloneRole = experiencePanel.getByTestId('resume-studio-work-role').last();
     await experiencePanel.getByLabel('Company', { exact: true }).fill('Acme Systems');
     await experiencePanel.getByRole('textbox', { name: 'Role' }).fill('Principal Engineer');
@@ -445,5 +445,43 @@ test.describe.serial('Resume Studio dev flow', () => {
     await page.getByRole('button', { name: 'Close' }).click();
     await expect(page.getByTestId('resume-studio-dialog')).toHaveCount(0);
     await expect(page.getByTestId('profile-subtitle')).toHaveText('Architect Engineer');
+  });
+
+  test('removing a nested work highlight updates the preview without switching sections', async ({
+    page,
+  }) => {
+    await page.goto(`http://127.0.0.1:${devServerPort}`);
+    await page.waitForLoadState('networkidle');
+
+    await page.getByTestId('resume-studio-launcher').click();
+    await expect(page.getByTestId('resume-studio-dialog')).toBeVisible();
+
+    const previewFrame = page.frameLocator('[data-testid="resume-studio-preview-frame"]');
+
+    await page.getByRole('button', { name: 'Experience' }).click();
+
+    const experiencePanel = stepPanel(page, 'experience');
+    await experiencePanel.getByRole('button', { name: 'Add role', exact: true }).click();
+
+    const standaloneRole = experiencePanel.getByTestId('resume-studio-work-role').last();
+    await standaloneRole.getByLabel('Company', { exact: true }).fill('Acme Systems');
+    await standaloneRole.getByRole('textbox', { name: 'Role' }).fill('Principal Engineer');
+    await standaloneRole.getByLabel('Start date', { exact: true }).fill('2024-01-01');
+    await replaceEditorText(contentEditable(standaloneRole), 'Owned platform reliability.');
+
+    await standaloneRole.getByRole('button', { name: 'Add highlight' }).click();
+    await replaceEditorText(contentEditable(standaloneRole, 1), 'First highlight.');
+    await standaloneRole.getByRole('button', { name: 'Add highlight' }).click();
+    await replaceEditorText(contentEditable(standaloneRole, 2), 'Second highlight.');
+
+    const previewHighlights = previewFrame
+      .getByTestId('work-experience-item')
+      .last()
+      .locator('[data-testid="work-experience-highlights"] li');
+    await expect(previewHighlights).toHaveText(['First highlight.', 'Second highlight.']);
+
+    await standaloneRole.getByRole('button', { name: 'Remove highlight 2' }).click();
+
+    await expect(previewHighlights).toHaveText(['First highlight.']);
   });
 });

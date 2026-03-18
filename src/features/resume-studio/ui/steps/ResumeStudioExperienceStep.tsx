@@ -6,7 +6,7 @@ import {
   isResumeStudioProgressionGroupDraft,
 } from '../../draft-factories';
 import type { ResumeStudioDraft } from '../../types';
-import { useResumeStudioStructuralSync } from '../draft-sync-context';
+import { useResumeStudioFieldArrayStructuralSync } from '../draft-sync-context';
 import { ResumeStudioSectionCard } from '../form-fields';
 import { ResumeStudioButton } from '../primitives';
 import { ResumeStudioProgressionGroupCard } from './ResumeStudioProgressionGroupCard';
@@ -14,11 +14,11 @@ import { ResumeStudioStandaloneWorkCard } from './ResumeStudioStandaloneWorkCard
 
 export function ResumeStudioExperienceStep() {
   const { control } = useFormContext<ResumeStudioDraft>();
-  const scheduleStructuralSync = useResumeStudioStructuralSync();
   const { append, fields, remove } = useFieldArray({
     control,
     name: 'work',
   });
+  useResumeStudioFieldArrayStructuralSync(fields);
 
   return (
     <ResumeStudioSectionCard title="Experience">
@@ -28,39 +28,23 @@ export function ResumeStudioExperienceStep() {
             <ResumeStudioProgressionGroupCard
               key={field.id}
               index={index}
-              removeGroup={(removeIndex) => {
-                remove(removeIndex);
-                scheduleStructuralSync();
-              }}
+              removeGroup={(removeIndex) => remove(removeIndex)}
             />
           ) : (
             <ResumeStudioStandaloneWorkCard
               key={field.id}
               index={index}
-              removeRole={(removeIndex) => {
-                remove(removeIndex);
-                scheduleStructuralSync();
-              }}
+              removeRole={(removeIndex) => remove(removeIndex)}
             />
           )
         )}
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <ResumeStudioButton
-          onClick={() => {
-            append(createEmptyResumeStudioStandaloneWorkDraft());
-            scheduleStructuralSync();
-          }}
-        >
+        <ResumeStudioButton onClick={() => append(createEmptyResumeStudioStandaloneWorkDraft())}>
           Add role
         </ResumeStudioButton>
-        <ResumeStudioButton
-          onClick={() => {
-            append(createEmptyResumeStudioProgressionGroupDraft());
-            scheduleStructuralSync();
-          }}
-        >
+        <ResumeStudioButton onClick={() => append(createEmptyResumeStudioProgressionGroupDraft())}>
           Add company progression
         </ResumeStudioButton>
       </div>

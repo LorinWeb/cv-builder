@@ -1,4 +1,11 @@
-import { createContext, createElement, useContext, type ReactNode } from 'react';
+import {
+  createContext,
+  createElement,
+  useContext,
+  useEffect,
+  useRef,
+  type ReactNode,
+} from 'react';
 
 const ResumeStudioStructuralSyncContext = createContext<() => void>(() => {});
 
@@ -18,4 +25,21 @@ export function ResumeStudioStructuralSyncProvider({
 
 export function useResumeStudioStructuralSync() {
   return useContext(ResumeStudioStructuralSyncContext);
+}
+
+export function useResumeStudioFieldArrayStructuralSync(
+  fields: Array<{ id: string }>
+) {
+  const scheduleStructuralSync = useResumeStudioStructuralSync();
+  const fieldIds = fields.map((field) => field.id).join(',');
+  const previousFieldIdsRef = useRef(fieldIds);
+
+  useEffect(() => {
+    if (previousFieldIdsRef.current === fieldIds) {
+      return;
+    }
+
+    previousFieldIdsRef.current = fieldIds;
+    scheduleStructuralSync();
+  }, [fieldIds, scheduleStructuralSync]);
 }

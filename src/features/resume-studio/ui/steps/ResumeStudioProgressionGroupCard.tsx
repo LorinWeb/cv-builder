@@ -4,7 +4,7 @@ import { useFieldArray, useFormContext, useWatch, type Path } from 'react-hook-f
 
 import { createEmptyResumeStudioProgressionRoleDraft } from '../../draft-factories';
 import type { ResumeStudioDraft } from '../../types';
-import { useResumeStudioStructuralSync } from '../draft-sync-context';
+import { useResumeStudioFieldArrayStructuralSync } from '../draft-sync-context';
 import { ResumeStudioInputField } from '../form-fields';
 import { ResumeStudioButton, ResumeStudioCard } from '../primitives';
 import { ResumeStudioWorkRoleFields } from './ResumeStudioWorkRoleFields';
@@ -19,7 +19,6 @@ export const ResumeStudioProgressionGroupCard = memo(function ResumeStudioProgre
   removeGroup,
 }: ResumeStudioProgressionGroupCardProps) {
   const { control } = useFormContext<ResumeStudioDraft>();
-  const scheduleStructuralSync = useResumeStudioStructuralSync();
   const progressionPath = `work.${index}.progression` as const;
   const watchedCompany = useWatch({
     control,
@@ -30,6 +29,7 @@ export const ResumeStudioProgressionGroupCard = memo(function ResumeStudioProgre
     control,
     name: progressionPath as never,
   });
+  useResumeStudioFieldArrayStructuralSync(fields);
 
   return (
     <ResumeStudioCard
@@ -38,10 +38,7 @@ export const ResumeStudioProgressionGroupCard = memo(function ResumeStudioProgre
     >
       <ResumeStudioButton
         aria-label={`Remove progression group ${index + 1}`}
-        onClick={() => {
-          removeGroup(index);
-          scheduleStructuralSync();
-        }}
+        onClick={() => removeGroup(index)}
         size="icon"
         variant="dangerSolid"
         className="absolute right-4 top-4"
@@ -81,10 +78,7 @@ export const ResumeStudioProgressionGroupCard = memo(function ResumeStudioProgre
               </h5>
               {fields.length > 1 ? (
                 <ResumeStudioButton
-                  onClick={() => {
-                    remove(roleIndex);
-                    scheduleStructuralSync();
-                  }}
+                  onClick={() => remove(roleIndex)}
                   size="compact"
                   variant="dangerOutline"
                 >
@@ -103,10 +97,7 @@ export const ResumeStudioProgressionGroupCard = memo(function ResumeStudioProgre
 
       <div className="mt-4">
         <ResumeStudioButton
-          onClick={() => {
-            append(createEmptyResumeStudioProgressionRoleDraft(groupCompany.trim()));
-            scheduleStructuralSync();
-          }}
+          onClick={() => append(createEmptyResumeStudioProgressionRoleDraft(groupCompany.trim()))}
         >
           Add role to progression
         </ResumeStudioButton>
