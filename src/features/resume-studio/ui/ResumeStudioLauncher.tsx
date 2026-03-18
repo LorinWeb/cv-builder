@@ -109,7 +109,7 @@ export function ResumeStudioLauncher() {
           type="button"
           disabled={isLoading || isBusy}
           onClick={handleLaunch}
-          className="rounded-full bg-[linear-gradient(135deg,#018741,#0d6f59)] px-5 py-3 text-sm font-medium tracking-[0.01em] text-white shadow-[0_20px_40px_-24px_rgba(1,135,65,0.8)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full bg-[linear-gradient(135deg,var(--color-floating-action-start),var(--color-floating-action-end))] px-5 py-3 text-sm font-medium tracking-[0.01em] text-white shadow-[0_20px_40px_-24px_var(--color-floating-action-shadow)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isBusy ? 'Opening…' : buttonLabel}
         </button>

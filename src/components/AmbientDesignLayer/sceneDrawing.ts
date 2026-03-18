@@ -181,7 +181,7 @@ export function getPrimaryColor() {
   const computedStyle = getComputedStyle(document.documentElement);
 
   return parseCssColor(
-    computedStyle.getPropertyValue('--color-primary'),
+    computedStyle.getPropertyValue('--color-ambient-primary'),
     DEFAULT_PRIMARY
   );
 }

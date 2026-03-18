@@ -34,7 +34,7 @@ function ResumeStudioLauncherFallback() {
         data-testid="resume-studio-launcher-loading"
         type="button"
         disabled
-        className="rounded-full bg-[linear-gradient(135deg,#018741,#0d6f59)] px-5 py-3 text-sm font-medium tracking-[0.01em] text-white shadow-[0_20px_40px_-24px_rgba(1,135,65,0.8)] disabled:cursor-not-allowed disabled:opacity-60"
+        className="rounded-full bg-[linear-gradient(135deg,var(--color-floating-action-start),var(--color-floating-action-end))] px-5 py-3 text-sm font-medium tracking-[0.01em] text-white shadow-[0_20px_40px_-24px_var(--color-floating-action-shadow)] disabled:cursor-not-allowed disabled:opacity-60"
       >
         Loading studio...
       </button>
@@ -84,7 +84,7 @@ function App({ data, isResumeStudioPreview = false }: AppProps) {
             src={profilePhoto.src}
             alt={profilePhoto.alt ?? `${profileData.name} profile photo`}
             className={joinClassNames(
-              'block h-44 w-44 rounded-full border border-[rgba(137,186,182,0.45)] object-cover object-center shadow-[0_16px_32px_-24px_rgba(34,34,34,0.5)] transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
+              'block h-44 w-44 rounded-full border border-(--color-border-photo) object-cover object-center shadow-[0_16px_32px_-24px_rgba(34,34,34,0.5)] transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
               isStandalonePhotoVisible
                 ? 'scale-100 opacity-100 blur-0'
                 : 'scale-95 opacity-0 blur-[2px]'

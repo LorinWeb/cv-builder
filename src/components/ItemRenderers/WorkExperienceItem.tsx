@@ -67,11 +67,11 @@ function renderSingleWorkItem(item: ResumeWorkEntry, className?: string) {
       data-testid="work-experience-item"
       className={joinClassNames('mb-5 mt-3.75', className)}
     >
-      <h3 className="mb-0 flex flex-wrap items-baseline gap-1 font-medium text-(--color-primary)">
+      <h3 className="mb-0 flex flex-wrap items-baseline gap-1 font-medium text-(--color-company-role)">
         {position}
         <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
-          <span className="font-light text-(--color-secondary)">@</span>
-          <span className="font-light text-(--color-secondary)">{company}</span>
+          <span className="font-light text-(--color-section-subtitle)">@</span>
+          <span className="font-light text-(--color-company-name)">{company}</span>
         </span>
       </h3>
       <p className="my-[0.5em] mt-0 block text-[0.85em]">
@@ -94,7 +94,7 @@ function renderProgressionEntry(entry: ResumeWorkEntry) {
       className={joinClassNames('mb-4.5 last:mb-0', getPrintClassNames(entry))}
       key={`${entry.company}-${entry.position}-${entry.startDate}`}
     >
-      <h4 className="mb-0 mt-2.5 flex flex-wrap items-baseline gap-1 font-medium text-(--color-primary)">
+      <h4 className="mb-0 mt-2.5 flex flex-wrap items-baseline gap-1 font-medium text-(--color-company-role)">
         {entry.position}
       </h4>
       <p className="my-[0.5em] mt-0 block text-[0.85em]">
@@ -121,7 +121,7 @@ function renderProgressionGroup(item: ResumeWorkGroup, className?: string) {
       className={joinClassNames('mb-5.5 mt-4.5', className)}
     >
       <header className="mb-2.5">
-        <h3 className="m-0 font-medium text-(--color-secondary)">
+        <h3 className="m-0 font-medium text-(--color-company-name)">
           <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
             <span>@</span>
             <span>{companyName}</span>

@@ -21,7 +21,7 @@ import type { ResumeStudioDraft } from '../types';
 import { ResumeStudioFieldFrame } from './form-fields';
 
 const EDITOR_TOOLBAR_CLASS_NAME =
-  'resume-studio-editor-toolbar flex-wrap items-center gap-1 border-b border-[rgba(74,127,122,0.14)] bg-[rgba(242,246,241,0.76)] px-2.5 py-2';
+  'resume-studio-editor-toolbar flex-wrap items-center gap-1 border-b border-(--color-border-subtle) bg-(--color-surface-subtle) px-2.5 py-2';
 
 interface TextEditorProps {
   containerClassName?: string;
@@ -197,22 +197,22 @@ export const TextEditor = memo(function TextEditor({
           }}
           placeholder={
             placeholder ? (
-              <span className="text-sm text-[rgba(23,49,42,0.52)]">{placeholder}</span>
+              <span className="text-sm text-(--color-text-placeholder)">{placeholder}</span>
             ) : null
           }
           plugins={plugins}
           className={joinClassNames(
-            'group overflow-hidden rounded-2xl border bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] transition focus-within:border-(--color-primary) focus-within:ring-2 focus-within:ring-[rgba(1,135,65,0.15)]',
+            'group overflow-hidden rounded-2xl border bg-(--color-surface-base) shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] transition focus-within:border-(--color-focus-border) focus-within:ring-2 focus-within:ring-(--color-focus-ring)',
             errorMessage
               ? 'border-[rgba(155,44,44,0.35)]'
-              : 'border-[rgba(74,127,122,0.25)]'
+              : 'border-(--color-border-control)'
           )}
           contentEditableClassName={joinClassNames(
-            'max-h-64 overflow-y-auto px-3.5 py-2.5 text-sm text-[#17312a] outline-none',
+            'max-h-64 overflow-y-auto px-3.5 py-2.5 text-sm text-(--color-text-body) outline-none',
             minHeightClassName,
             mode === 'inline'
-              ? '[&_p]:m-0 [&_p+_p]:mt-2 [&_ul]:my-2 [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:pl-5 [&_code]:rounded [&_code]:bg-[rgba(137,186,182,0.12)] [&_code]:px-1 [&_code]:py-[0.1em]'
-              : '[&_p]:m-0 [&_p+_p]:mt-2.5 [&_ul]:my-2 [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:pl-5 [&_code]:rounded [&_code]:bg-[rgba(137,186,182,0.12)] [&_code]:px-1 [&_code]:py-[0.1em]'
+              ? '[&_p]:m-0 [&_p+_p]:mt-2 [&_ul]:my-2 [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:pl-5 [&_code]:rounded [&_code]:bg-(--color-inline-code-background) [&_code]:px-1 [&_code]:py-[0.1em]'
+              : '[&_p]:m-0 [&_p+_p]:mt-2.5 [&_ul]:my-2 [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:pl-5 [&_code]:rounded [&_code]:bg-(--color-inline-code-background) [&_code]:px-1 [&_code]:py-[0.1em]'
           )}
           spellCheck
         />

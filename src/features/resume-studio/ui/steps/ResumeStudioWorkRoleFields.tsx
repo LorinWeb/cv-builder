@@ -57,11 +57,11 @@ export const ResumeStudioWorkRoleFields = memo(function ResumeStudioWorkRoleFiel
             type="url"
           />
         ) : null}
-        <label className="mt-7 inline-flex items-center gap-2 text-sm font-medium text-(--color-primary)">
+        <label className="mt-7 inline-flex items-center gap-2 text-sm font-medium text-(--color-text-strong)">
           <input
             {...register(`${basePath}.isContract` as Path<ResumeStudioDraft>)}
             type="checkbox"
-            className="h-4 w-4 rounded border-[rgba(74,127,122,0.35)]"
+            className="h-4 w-4 rounded border-(--color-border-strong)"
           />
           Contract role
         </label>

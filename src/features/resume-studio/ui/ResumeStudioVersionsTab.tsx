@@ -44,7 +44,7 @@ export function ResumeStudioVersionsTab({
             value={createVersionName}
             onChange={(event) => onCreateVersionNameChange(event.target.value)}
             placeholder="Spring 2026 product CV"
-            className="w-full rounded-2xl border border-[rgba(74,127,122,0.25)] bg-white px-3.5 py-2.5 text-sm text-[#17312a] outline-none transition focus:border-(--color-primary) focus:ring-2 focus:ring-[rgba(1,135,65,0.15)]"
+            className="w-full rounded-2xl border border-(--color-border-control) bg-(--color-surface-base) px-3.5 py-2.5 text-sm text-(--color-text-body) outline-none transition focus:border-(--color-focus-border) focus:ring-2 focus:ring-(--color-focus-ring)"
           />
           <ResumeStudioButton
             data-testid="resume-studio-create-version"
@@ -57,7 +57,7 @@ export function ResumeStudioVersionsTab({
           </ResumeStudioButton>
         </div>
         {!canCreateVersion ? (
-          <p className="m-0 text-xs leading-5 text-(--color-secondary)">
+          <p className="m-0 text-xs leading-5 text-(--color-text-muted)">
             Wait for the current version to finish saving before creating another one.
           </p>
         ) : null}
@@ -65,7 +65,7 @@ export function ResumeStudioVersionsTab({
 
       <ResumeStudioSectionCard title="Saved versions">
         {versions.length === 0 ? (
-          <p className="m-0 text-sm leading-6 text-(--color-secondary)">
+          <p className="m-0 text-sm leading-6 text-(--color-text-muted)">
             No versions yet. Save your resume, then create variants here.
           </p>
         ) : (
@@ -79,7 +79,7 @@ export function ResumeStudioVersionsTab({
                 className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
               >
                 <div>
-                  <p className="m-0 flex items-center gap-2 text-sm font-medium text-(--color-primary)">
+                  <p className="m-0 flex items-center gap-2 text-sm font-medium text-(--color-text-strong)">
                     <span>{version.name}</span>
                     {version.id === publishedVersionId ? (
                       <span className="rounded-full bg-[rgba(12,94,78,0.12)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#0c5e4e]">
@@ -87,7 +87,7 @@ export function ResumeStudioVersionsTab({
                       </span>
                     ) : null}
                     {version.id === activeVersionId ? (
-                      <span className="rounded-full bg-[rgba(1,135,65,0.12)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-(--color-primary)">
+                      <span className="rounded-full bg-(--color-surface-active) px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-(--color-text-success)">
                         Editing
                       </span>
                     ) : null}
@@ -97,10 +97,10 @@ export function ResumeStudioVersionsTab({
                       </span>
                     ) : null}
                   </p>
-                  <p className="m-0 text-xs leading-5 text-(--color-secondary)">
+                  <p className="m-0 text-xs leading-5 text-(--color-text-muted)">
                     Created {format(new Date(version.createdAt), 'PPP p')}
                   </p>
-                  <p className="m-0 text-xs leading-5 text-(--color-secondary)">
+                  <p className="m-0 text-xs leading-5 text-(--color-text-muted)">
                     Updated {format(new Date(version.updatedAt), 'PPP p')}
                   </p>
                 </div>

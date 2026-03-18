@@ -41,7 +41,7 @@ export const ListItemsEditor = memo(function ListItemsEditor({
       )}
 
       {fields.length === 0 ? (
-        <p className="m-0 text-sm leading-6 text-(--color-secondary)">{emptyCopy}</p>
+        <p className="m-0 text-sm leading-6 text-(--color-text-muted)">{emptyCopy}</p>
       ) : null}
 
       <div className="space-y-2.5">

@@ -51,7 +51,7 @@ export function ResumeMarkdown({
         a: ({ children, href }) => renderLink(children, href),
         br: () => <br />,
         code: ({ children }) => (
-          <code className="rounded bg-[rgba(137,186,182,0.12)] px-1 py-[0.1em] font-[ui-monospace,SFMono-Regular,monospace] text-[0.92em]">
+          <code className="rounded bg-(--color-inline-code-background) px-1 py-[0.1em] font-[ui-monospace,SFMono-Regular,monospace] text-[0.92em]">
             {children}
           </code>
         ),

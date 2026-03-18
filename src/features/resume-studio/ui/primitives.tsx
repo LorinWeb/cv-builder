@@ -19,9 +19,9 @@ const RESUME_STUDIO_BUTTON_VARIANTS = {
     'bg-[#c53a3a] text-white hover:bg-[#ab2c2c]',
   dangerTint:
     'border border-[rgba(155,44,44,0.24)] bg-[rgba(155,44,44,0.08)] text-[#9b2c2c]',
-  primary: 'bg-(--color-primary) text-white',
+  primary: 'bg-(--color-fill-strong) text-white',
   secondary:
-    'border border-(--color-header-border) bg-white text-(--color-primary)',
+    'border border-(--color-header-border) bg-(--color-surface-base) text-(--color-text-strong)',
 } as const;
 
 const RESUME_STUDIO_BUTTON_SIZES = {
@@ -34,8 +34,8 @@ const RESUME_STUDIO_BUTTON_SIZES = {
 } as const;
 
 const RESUME_STUDIO_CARD_TONES = {
-  nested: 'border-[rgba(74,127,122,0.16)] bg-white/85',
-  muted: 'border-[rgba(74,127,122,0.14)] bg-[rgba(242,246,241,0.76)]',
+  nested: 'border-(--color-border-emphasis) bg-white/85',
+  muted: 'border-(--color-border-subtle) bg-(--color-surface-subtle)',
 } as const;
 
 const RESUME_STUDIO_CARD_SPACING = {

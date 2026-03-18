@@ -110,10 +110,10 @@ export function ResumeStudioPreviewFrame({
   }, [isFrameLoaded]);
 
   return (
-    <aside className="rounded-[28px] border border-[rgba(74,127,122,0.14)] bg-[rgba(247,250,247,0.94)] p-4 shadow-[0_28px_60px_-44px_rgba(11,37,31,0.45)]">
+    <aside className="rounded-[28px] border border-(--color-border-subtle) bg-(--color-surface-panel) p-4 shadow-[0_28px_60px_-44px_rgba(11,37,31,0.45)]">
       <div className="mb-3">
-        <p className="m-0 text-sm font-medium text-(--color-primary)">Live preview</p>
-        <p className="mt-1 text-xs leading-5 text-(--color-secondary)">
+        <p className="m-0 text-sm font-medium text-(--color-text-strong)">Live preview</p>
+        <p className="mt-1 text-xs leading-5 text-(--color-text-muted)">
           Changes render instantly here and autosave after a short pause.
         </p>
       </div>
@@ -121,7 +121,7 @@ export function ResumeStudioPreviewFrame({
       <div
         ref={containerRef}
         data-testid="resume-studio-preview-viewport"
-        className="relative h-135 overflow-hidden rounded-3xl border border-[rgba(74,127,122,0.14)] bg-[linear-gradient(180deg,#dfe9e3,#f1f5f0)]"
+        className="relative h-135 overflow-hidden rounded-3xl border border-(--color-border-subtle) bg-[linear-gradient(180deg,#dfe9e3,#f1f5f0)]"
       >
         <div
           className="absolute inset-3 flex items-center justify-center"

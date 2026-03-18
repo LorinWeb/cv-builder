@@ -55,7 +55,7 @@ export function ResumeStudioFieldFrame({
           <p
             id={labelId}
             className={
-              hideLabel ? 'sr-only' : 'text-sm font-medium text-(--color-primary)'
+              hideLabel ? 'sr-only' : 'text-sm font-medium text-(--color-text-strong)'
             }
           >
             {label}
@@ -64,7 +64,7 @@ export function ResumeStudioFieldFrame({
           {description ? (
             <p
               id={descriptionId}
-              className="text-xs leading-5 text-(--color-secondary)"
+              className="text-xs leading-5 text-(--color-text-muted)"
             >
               {description}
             </p>
@@ -84,14 +84,14 @@ export function ResumeStudioFieldFrame({
       <div className={joinClassNames('flex flex-col gap-1.5', containerClassName)}>
         <Field.Label
           className={
-            hideLabel ? 'sr-only' : 'text-sm font-medium text-(--color-primary)'
+            hideLabel ? 'sr-only' : 'text-sm font-medium text-(--color-text-strong)'
           }
         >
           {label}
         </Field.Label>
         {children}
         {description ? (
-          <Field.Description className="text-xs leading-5 text-(--color-secondary)">
+          <Field.Description className="text-xs leading-5 text-(--color-text-muted)">
             {description}
           </Field.Description>
         ) : null}
@@ -139,10 +139,10 @@ export function ResumeStudioInputField({
               onValueChange={field.onChange}
               placeholder={placeholder}
               className={joinClassNames(
-                'w-full rounded-2xl border px-3.5 py-2.5 text-sm text-[#17312a] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] outline-none transition focus:border-(--color-primary) focus:ring-2 focus:ring-[rgba(1,135,65,0.15)]',
+                'w-full rounded-2xl border px-3.5 py-2.5 text-sm text-(--color-text-body) shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] outline-none transition focus:border-(--color-focus-border) focus:ring-2 focus:ring-(--color-focus-ring)',
                 readOnly
-                  ? 'border-[rgba(74,127,122,0.2)] bg-[rgba(74,127,122,0.08)]'
-                  : 'border-[rgba(74,127,122,0.25)] bg-white'
+                  ? 'border-(--color-border-readonly) bg-(--color-surface-subtle)'
+                  : 'border-(--color-border-control) bg-(--color-surface-base)'
               )}
             />
           )}

@@ -47,7 +47,7 @@ export const ResumeStudioProgressionGroupCard = memo(function ResumeStudioProgre
       </ResumeStudioButton>
 
       <div className="pr-10">
-        <h4 className="m-0 text-sm font-medium uppercase tracking-[0.08em] text-(--color-secondary)">
+        <h4 className="m-0 text-sm font-medium uppercase tracking-[0.08em] text-(--color-text-muted)">
           Company progression
         </h4>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -73,7 +73,7 @@ export const ResumeStudioProgressionGroupCard = memo(function ResumeStudioProgre
             tone="nested"
           >
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h5 className="m-0 text-sm font-medium text-(--color-primary)">
+              <h5 className="m-0 text-sm font-medium text-(--color-text-strong)">
                 Role {roleIndex + 1}
               </h5>
               {fields.length > 1 ? (

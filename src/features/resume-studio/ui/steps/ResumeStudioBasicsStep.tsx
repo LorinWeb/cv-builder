@@ -64,11 +64,11 @@ export function ResumeStudioBasicsStep({
       </ResumeStudioSectionCard>
 
       <ResumeStudioSectionCard title="Portrait">
-        <div className="rounded-3xl border border-dashed border-[rgba(74,127,122,0.25)] bg-[rgba(242,246,241,0.76)] p-4">
+        <div className="rounded-3xl border border-dashed border-(--color-border-control) bg-(--color-surface-subtle) p-4">
           <div className="flex flex-wrap items-center gap-3">
             <label
               htmlFor={photoInputId}
-              className="inline-flex cursor-pointer items-center rounded-full bg-(--color-primary) px-4 py-2 text-sm font-medium text-white"
+              className="inline-flex cursor-pointer items-center rounded-full bg-(--color-fill-strong) px-4 py-2 text-sm font-medium text-white"
             >
               {isUploadingPhoto ? 'Uploading…' : 'Upload Photo'}
               <input
@@ -87,7 +87,7 @@ export function ResumeStudioBasicsStep({
                   data-testid="resume-studio-photo-preview"
                   src={photoSrc}
                   alt={photoPreviewAlt}
-                  className="h-14 w-14 rounded-2xl border border-[rgba(74,127,122,0.18)] object-cover object-center shadow-[0_12px_24px_-18px_rgba(11,37,31,0.45)]"
+                  className="h-14 w-14 rounded-2xl border border-(--color-border-thumbnail) object-cover object-center shadow-[0_12px_24px_-18px_rgba(11,37,31,0.45)]"
                 />
                 <ResumeStudioButton
                   aria-label="Remove portrait"

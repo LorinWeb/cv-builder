@@ -21,7 +21,7 @@ function SectionTitle({ className, ...props }: SectionTitleProps) {
     <h2
       data-testid="section-title"
       className={joinClassNames(
-        'mt-6 flex items-center justify-between font-[sans-serif] font-medium text-(--color-secondary)',
+        'mt-6 flex items-center justify-between font-[sans-serif] font-medium text-(--color-section-title)',
         className
       )}
       {...props}

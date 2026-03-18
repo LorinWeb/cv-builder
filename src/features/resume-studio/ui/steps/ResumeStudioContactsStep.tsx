@@ -17,7 +17,7 @@ export function ResumeStudioContactsStep() {
   return (
     <div className="space-y-4">
       <ResumeStudioSectionCard title="Contacts">
-        <p className="m-0 text-sm leading-6 text-(--color-secondary)">
+        <p className="m-0 text-sm leading-6 text-(--color-text-muted)">
           Email and phone are stored locally and used for PDF output, but they stay off the public web page.
         </p>
         <div className="grid gap-4 md:grid-cols-2">

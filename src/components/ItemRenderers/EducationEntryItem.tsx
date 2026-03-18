@@ -16,13 +16,13 @@ function EducationEntryItem({ className, item }: EducationEntryItemProps) {
       data-testid="education-entry-item"
       className={className || undefined}
     >
-      <h3 className="mb-0 block font-light text-(--color-secondary)">
+      <h3 className="mb-0 block font-light text-(--color-section-subtitle)">
         {item.studyType} {item.area}
       </h3>
       <p className="my-[0.5em] mt-0 block text-[0.85em]">
         {formatDateRangeWithDuration(item.startDate, item.endDate)}
       </p>
-      <h4 className="mt-0 font-medium text-(--color-primary)">
+      <h4 className="mt-0 font-medium text-(--color-company-role)">
         {item.institution}
       </h4>
       {courses.length > 0 ? (

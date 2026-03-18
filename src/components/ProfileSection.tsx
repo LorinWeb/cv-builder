@@ -55,11 +55,11 @@ function ProfileSection({
                 : 'mr-0 h-0 w-0 -translate-x-2 opacity-0'
             )}
           >
-            <img
-              src={photo.src}
-              alt=""
-              className={joinClassNames(
-                'block h-22.25 w-16.5 rounded-[14px] border border-[rgba(137,186,182,0.45)] object-cover object-center shadow-[0_12px_24px_-20px_rgba(34,34,34,0.5)] transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
+              <img
+                src={photo.src}
+                alt=""
+                className={joinClassNames(
+                'block h-22.25 w-16.5 rounded-[14px] border border-(--color-border-photo) object-cover object-center shadow-[0_12px_24px_-20px_rgba(34,34,34,0.5)] transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
                 showCompactPhoto ? 'scale-100' : 'scale-90'
               )}
             />
@@ -72,13 +72,13 @@ function ProfileSection({
         >
           <h1
             data-testid="profile-title"
-            className="text-(--color-primary) my-0"
+            className="text-(--color-text-strong) my-0"
           >
             {profileData.name}
           </h1>
           <p
             data-testid="profile-subtitle"
-            className="m-0 text-[1.1rem] leading-normal text-(--color-secondary)"
+            className="m-0 text-[1.1rem] leading-normal text-(--color-section-subtitle)"
           >
             {profileData.label}
           </p>
@@ -97,7 +97,7 @@ function ProfileSection({
               <li
                 key={item.key}
                 data-testid={`profile-contact-${item.key}`}
-                className="list-none text-(--color-secondary)"
+                className="list-none text-(--color-section-subtitle)"
               >
                 {item.href ? (
                   <a
@@ -120,12 +120,12 @@ function ProfileSection({
           {isAvailable && !isPdfRenderTarget ? (
             <li
               data-testid="profile-download"
-              className="list-none text-(--color-primary) print:hidden"
+              className="list-none text-(--color-text-strong) print:hidden"
             >
               <a
                 href={href}
                 download
-                className="inline-flex items-center gap-1.5 rounded-full border border-(--color-header-border) px-3 py-1 text-inherit no-underline transition-colors hover:bg-[rgba(137,186,182,0.08)]"
+                className="inline-flex items-center gap-1.5 rounded-full border border-(--color-header-border) px-3 py-1 text-inherit no-underline transition-colors hover:bg-(--color-surface-hover)"
               >
                 <Download
                   aria-hidden="true"
