@@ -43,6 +43,7 @@ const resumeBasicsSchema = z.object({
   photo: resumePhotoSchema.optional(),
   profiles: z.array(resumeProfileSchema).optional(),
   summary: z.string(),
+  summaryAlwaysFirstSection: z.boolean().optional(),
 });
 
 const resumeWorkEntrySchema = printConfigSchema.extend({

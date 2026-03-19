@@ -37,6 +37,7 @@ export interface ResumeBasics {
   photo?: ResumePhoto;
   profiles?: ResumeProfile[];
   summary: string;
+  summaryAlwaysFirstSection?: boolean;
 }
 
 export interface ResumeSourceBasics extends ResumeBasics {

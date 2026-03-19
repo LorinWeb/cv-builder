@@ -147,7 +147,16 @@ test('redacts private contact details from the public resume payload', async () 
   withTempProjectRoot((projectRoot) => {
     writeFile(
       resolveProjectPath(projectRoot, SAMPLE_RESUME_DATA_PATH),
-      JSON.stringify(MINIMAL_RESUME_DATA, null, 2)
+      JSON.stringify(
+        {
+          basics: {
+            ...MINIMAL_RESUME_DATA.basics,
+            summaryAlwaysFirstSection: true,
+          },
+        },
+        null,
+        2
+      )
     );
 
     const resumeData = loadResumeData({ mode: 'development', projectRoot });
@@ -156,6 +165,7 @@ test('redacts private contact details from the public resume payload', async () 
     expect('email' in publicResumeData.basics).toBeFalsy();
     expect('phone' in publicResumeData.basics).toBeFalsy();
     expect(publicResumeData.basics.name).toBe('John Doe');
+    expect(publicResumeData.basics.summaryAlwaysFirstSection).toBe(true);
   });
 });
 

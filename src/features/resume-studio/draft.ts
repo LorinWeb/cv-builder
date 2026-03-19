@@ -152,6 +152,7 @@ export function toResumeStudioDraft(data: ResumeSourceData): ResumeStudioDraft {
       })),
       region: toDraftString(data.basics.location?.region),
       summary: data.basics.summary,
+      summaryAlwaysFirstSection: Boolean(data.basics.summaryAlwaysFirstSection),
     },
     education: (data.education || []).map(toEducationDraft),
     impact: toTextDraftList(data.basics.impact),
@@ -191,6 +192,7 @@ function applyBasics(source: ResumeSourceData, draft: ResumeStudioDraft): Resume
         username: toOptionalString(profile.username),
       })),
     summary: draft.basics.summary,
+    summaryAlwaysFirstSection: draft.basics.summaryAlwaysFirstSection || undefined,
   };
 }
 

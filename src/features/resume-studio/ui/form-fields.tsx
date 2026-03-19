@@ -1,12 +1,13 @@
 import { Field } from '@base-ui/react/field';
 import { Input } from '@base-ui/react/input';
 import type { ReactNode } from 'react';
-import { Controller, useFormContext, type Path } from 'react-hook-form';
+import { Controller, useFormContext, useWatch, type Path } from 'react-hook-form';
 
 import { joinClassNames } from '../../../helpers/classNames';
 import type { ResumeStudioDraft } from '../types';
 
 interface ResumeStudioInputFieldProps {
+  className?: string;
   description?: string;
   hideLabel?: boolean;
   label: string;
@@ -104,6 +105,7 @@ export function ResumeStudioFieldFrame({
 }
 
 export function ResumeStudioInputField({
+  className,
   description,
   hideLabel = false,
   label,
@@ -125,6 +127,7 @@ export function ResumeStudioInputField({
       invalid={Boolean(errorMessage)}
       label={label}
       name={name}
+      rootClassName={className}
     >
         <Controller
           control={control}
@@ -148,6 +151,69 @@ export function ResumeStudioInputField({
           )}
         />
     </ResumeStudioFieldFrame>
+  );
+}
+
+interface ResumeStudioCheckboxFieldProps {
+  className?: string;
+  description?: string;
+  label: string;
+  name: Path<ResumeStudioDraft>;
+  testId?: string;
+}
+
+export function ResumeStudioCheckboxField({
+  className,
+  description,
+  label,
+  name,
+  testId,
+}: ResumeStudioCheckboxFieldProps) {
+  const { control, setValue } = useFormContext<ResumeStudioDraft>();
+  const isChecked = Boolean(
+    useWatch({
+      control,
+      name,
+    })
+  );
+
+  return (
+    <div className={joinClassNames('flex flex-col gap-1.5', className)}>
+      <button
+        data-testid={testId}
+        type="button"
+        role="checkbox"
+        aria-checked={isChecked}
+        onClick={() =>
+          setValue(name, !isChecked as never, {
+            shouldDirty: true,
+            shouldTouch: true,
+          })
+        }
+        className="relative z-10 inline-flex items-center gap-2 text-left text-sm font-medium text-(--color-text-strong) outline-none transition focus:ring-2 focus:ring-(--color-focus-ring)"
+      >
+        <span
+          aria-hidden="true"
+          className={joinClassNames(
+            'flex h-4 w-4 items-center justify-center rounded border border-(--color-border-strong) bg-(--color-surface-base)',
+            isChecked && 'border-(--color-fill-strong) bg-(--color-fill-strong) text-white'
+          )}
+        >
+          <span
+            className={joinClassNames(
+              'h-2 w-2 rounded-xs bg-current transition-opacity',
+              isChecked ? 'opacity-100' : 'opacity-0'
+            )}
+          />
+        </span>
+        <span>{label}</span>
+      </button>
+      {description ? (
+        <p className="text-xs leading-5 text-(--color-text-muted)">
+          {description}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

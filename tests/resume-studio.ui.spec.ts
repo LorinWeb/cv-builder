@@ -47,6 +47,21 @@ function autosaveStatus(page: Page) {
   return page.getByTestId('resume-studio-autosave-status');
 }
 
+async function firstSectionTestId(locator: Locator) {
+  return locator.evaluate((element) => {
+    const firstSection = Array.from(element.children).find((child) => {
+      return (
+        child instanceof HTMLElement &&
+        child.getAttribute('data-testid')?.startsWith('resume-section-')
+      );
+    });
+
+    return firstSection instanceof HTMLElement
+      ? firstSection.getAttribute('data-testid')
+      : null;
+  });
+}
+
 function stepPanel(page: Page, stepId: string) {
   return page.getByTestId(`resume-studio-step-panel-${stepId}`);
 }
@@ -181,13 +196,31 @@ test.describe.serial('Resume Studio dev flow', () => {
 
     await expect(page.getByTestId('profile-title')).toHaveText('Jane Template');
     await expect(page.getByTestId('profile-subtitle')).toHaveText('Staff Engineer');
+    const summaryPlacementToggle = page.getByTestId(
+      'resume-studio-field-basics-summary-first-section'
+    );
+    const liveMainContent = page.getByTestId('page-main-content');
+    const liveSidebar = page.getByTestId('page-sidebar-right');
     const liveSummaryBody = page
       .getByTestId('resume-section-summary')
       .getByTestId('section-body');
+    await expect(summaryPlacementToggle).not.toBeChecked();
+    await expect(liveMainContent.getByTestId('resume-section-summary')).toHaveCount(0);
+    await expect(liveSidebar.getByTestId('resume-section-summary')).toHaveCount(1);
     await expect(liveSummaryBody.locator('h1, h2, h3, h4, h5, h6')).toHaveCount(0);
     await expect(liveSummaryBody.locator('strong')).toHaveText('engineering');
     await expect(liveSummaryBody.locator('ul li')).toHaveText([/Guides execution\.?/]);
     await expect(page.getByTestId('resume-studio-launcher')).toHaveText('Edit resume');
+
+    await summaryPlacementToggle.evaluate((element) => {
+      (element as HTMLElement).click();
+    });
+    await expect(summaryPlacementToggle).toBeChecked();
+    await expect
+      .poll(() => firstSectionTestId(liveMainContent))
+      .toBe('resume-section-summary');
+    await expect(liveMainContent.getByTestId('resume-section-summary')).toHaveCount(1);
+    await expect(liveSidebar.getByTestId('resume-section-summary')).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Experience' }).click();
     const experiencePanel = stepPanel(page, 'experience');
@@ -349,10 +382,16 @@ test.describe.serial('Resume Studio dev flow', () => {
 
     await page.getByRole('button', { name: 'Basics' }).click();
     await page.getByLabel('Title').fill('Principal Engineer');
+    await summaryPlacementToggle.evaluate((element) => {
+      (element as HTMLElement).click();
+    });
     await expect(previewFrame.getByTestId('profile-subtitle')).toHaveText(
       'Principal Engineer'
     );
     await expect(page.getByTestId('profile-subtitle')).toHaveText('Principal Engineer');
+    await expect(summaryPlacementToggle).not.toBeChecked();
+    await expect(liveMainContent.getByTestId('resume-section-summary')).toHaveCount(0);
+    await expect(liveSidebar.getByTestId('resume-section-summary')).toHaveCount(1);
 
     await page.getByTestId('resume-studio-see-versions').click();
     await page
@@ -364,6 +403,11 @@ test.describe.serial('Resume Studio dev flow', () => {
     await expect(
       previewFrame.getByTestId('work-progression-group').getByText('Grouped Systems')
     ).toBeVisible();
+    await expect
+      .poll(() => firstSectionTestId(liveMainContent))
+      .toBe('resume-section-summary');
+    await expect(liveMainContent.getByTestId('resume-section-summary')).toHaveCount(1);
+    await expect(liveSidebar.getByTestId('resume-section-summary')).toHaveCount(0);
     await page.getByTestId('resume-studio-see-versions').click();
     await expect(page.getByTestId('resume-studio-version-item-1')).toContainText('Published');
     await expect(page.getByTestId('resume-studio-version-item-1')).toContainText('Editing');
@@ -380,6 +424,8 @@ test.describe.serial('Resume Studio dev flow', () => {
     );
     await expect(page.getByTestId('profile-subtitle')).toHaveText('Principal Engineer');
     await expect(page.getByTestId('work-progression-group').getByText('Grouped Systems')).toBeVisible();
+    await expect(liveMainContent.getByTestId('resume-section-summary')).toHaveCount(0);
+    await expect(liveSidebar.getByTestId('resume-section-summary')).toHaveCount(1);
     await page.getByTestId('resume-studio-see-versions').click();
     await expect(page.getByTestId('resume-studio-version-item-1')).toContainText('Published');
     await expect(page.getByTestId('resume-studio-version-item-2')).toContainText('Editing');
@@ -387,29 +433,42 @@ test.describe.serial('Resume Studio dev flow', () => {
       'Unpublished changes'
     );
 
-    await page.getByTestId('resume-studio-back-to-edit').click();
+    await page
+      .getByTestId('resume-studio-version-item-1')
+      .getByRole('button', { name: 'Edit version' })
+      .click();
+    await expect(previewFrame.getByTestId('profile-subtitle')).toHaveText('Staff Engineer');
+    await expect(page.getByTestId('profile-subtitle')).toHaveText('Staff Engineer');
+    await expect
+      .poll(() => firstSectionTestId(liveMainContent))
+      .toBe('resume-section-summary');
+    await expect(liveMainContent.getByTestId('resume-section-summary')).toHaveCount(1);
+    await expect(liveSidebar.getByTestId('resume-section-summary')).toHaveCount(0);
+
     await page.getByTestId('resume-studio-publish').click();
-    await expect(page.getByText('Staff CV published to src/data/resume.private.json.')).toBeVisible();
+    await expect(
+      page.getByText('Primary resume published to src/data/resume.private.json.')
+    ).toBeVisible();
     await expect(autosaveStatus(page)).toHaveText('Draft saved locally and published.');
 
     await page.getByTestId('resume-studio-see-versions').click();
     await expect(
       page
-        .getByTestId('resume-studio-version-item-2')
+        .getByTestId('resume-studio-version-item-1')
         .getByRole('button', { name: 'Delete' })
     ).toHaveCount(0);
-    await expect(page.getByTestId('resume-studio-version-item-2')).toContainText('Published');
-    await expect(page.getByTestId('resume-studio-version-item-2')).toContainText('Editing');
+    await expect(page.getByTestId('resume-studio-version-item-1')).toContainText('Published');
+    await expect(page.getByTestId('resume-studio-version-item-1')).toContainText('Editing');
     await page
-      .getByTestId('resume-studio-version-item-1')
+      .getByTestId('resume-studio-version-item-2')
       .getByRole('button', { name: 'Delete' })
       .click();
-    await expect(page.getByText('Primary resume deleted.')).toBeVisible();
-    await expect(page.getByTestId('resume-studio-version-item-1')).toHaveCount(0);
+    await expect(page.getByText('Staff CV deleted.')).toBeVisible();
+    await expect(page.getByTestId('resume-studio-version-item-2')).toHaveCount(0);
     await page.getByTestId('resume-studio-back-to-edit').click();
-    await expect(page.getByTestId('profile-subtitle')).toHaveText('Principal Engineer');
+    await expect(page.getByTestId('profile-subtitle')).toHaveText('Staff Engineer');
     await page.getByRole('button', { name: 'Close' }).click();
-    await expect(page.getByTestId('profile-subtitle')).toHaveText('Principal Engineer');
+    await expect(page.getByTestId('profile-subtitle')).toHaveText('Staff Engineer');
   });
 
   test('closing without publish reverts the page, and publishing keeps the selected version live', async ({

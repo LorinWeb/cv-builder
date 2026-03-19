@@ -1,9 +1,9 @@
 import { memo } from 'react';
-import { useFormContext, type Path } from 'react-hook-form';
+import type { Path } from 'react-hook-form';
 
 import { ListItemsEditor } from '../ListItemsEditor';
 import { TextEditor } from '../TextEditor';
-import { ResumeStudioInputField } from '../form-fields';
+import { ResumeStudioCheckboxField, ResumeStudioInputField } from '../form-fields';
 import { ResumeStudioButton } from '../primitives';
 import type { ResumeStudioDraft } from '../../types';
 
@@ -22,8 +22,6 @@ export const ResumeStudioWorkRoleFields = memo(function ResumeStudioWorkRoleFiel
   onRemove,
   removeLabel = 'Remove role',
 }: ResumeStudioWorkRoleFieldsProps) {
-  const { register } = useFormContext<ResumeStudioDraft>();
-
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2">
@@ -57,14 +55,11 @@ export const ResumeStudioWorkRoleFields = memo(function ResumeStudioWorkRoleFiel
             type="url"
           />
         ) : null}
-        <label className="mt-7 inline-flex items-center gap-2 text-sm font-medium text-(--color-text-strong)">
-          <input
-            {...register(`${basePath}.isContract` as Path<ResumeStudioDraft>)}
-            type="checkbox"
-            className="h-4 w-4 rounded border-(--color-border-strong)"
-          />
-          Contract role
-        </label>
+        <ResumeStudioCheckboxField
+          className="mt-7"
+          label="Contract role"
+          name={`${basePath}.isContract` as Path<ResumeStudioDraft>}
+        />
       </div>
 
       <div className="mt-4">

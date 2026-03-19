@@ -173,6 +173,60 @@ test('creates and edits multiple named versions independently', async () => {
   });
 });
 
+test('preserves summary first-section placement across version switches and publish', async () => {
+  withTempProject((projectRoot) => {
+    const store = createResumeStudioStore(projectRoot);
+    const initializedState = store.initializeDraft();
+    const primaryVersionId = initializedState.activeVersionId!;
+    const primarySavedState = store.saveDraft({
+      ...initializedState.draft!,
+      basics: {
+        ...initializedState.draft!.basics,
+        summaryAlwaysFirstSection: true,
+      },
+    });
+
+    expect(primarySavedState.draft?.basics.summaryAlwaysFirstSection).toBe(true);
+
+    const secondaryVersionState = store.createVersion('Sidebar CV');
+    const secondaryVersionId = secondaryVersionState.activeVersionId!;
+    const {
+      summaryAlwaysFirstSection: _summaryAlwaysFirstSection,
+      ...secondaryBasics
+    } = secondaryVersionState.draft!.basics;
+
+    const secondarySavedState = store.saveDraft({
+      ...secondaryVersionState.draft!,
+      basics: secondaryBasics,
+    });
+
+    expect(secondarySavedState.draft?.basics.summaryAlwaysFirstSection).toBeUndefined();
+
+    const primarySelectedState = store.selectVersion(primaryVersionId);
+
+    expect(primarySelectedState.draft?.basics.summaryAlwaysFirstSection).toBe(true);
+
+    const secondarySelectedState = store.selectVersion(secondaryVersionId);
+
+    expect(secondarySelectedState.draft?.basics.summaryAlwaysFirstSection).toBeUndefined();
+
+    store.selectVersion(primaryVersionId);
+    const publishedState = store.publishActiveVersion();
+    const publishedFile = JSON.parse(
+      readFileSync(path.join(projectRoot, 'src/data/resume.private.json'), 'utf8')
+    ) as {
+      basics: {
+        summaryAlwaysFirstSection?: boolean;
+      };
+    };
+
+    expect(publishedState.isActiveVersionPublished).toBeTruthy();
+    expect(publishedFile.basics.summaryAlwaysFirstSection).toBe(true);
+
+    store.close();
+  });
+});
+
 test('selecting another version does not rewrite src/data/resume.private.json', async () => {
   withTempProject((projectRoot) => {
     const store = createResumeStudioStore(projectRoot);

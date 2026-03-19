@@ -25,6 +25,7 @@ export interface ResumeStudioBasicsDraft {
   profiles: ResumeStudioProfileDraft[];
   region: string;
   summary: string;
+  summaryAlwaysFirstSection: boolean;
   city: string;
 }
 

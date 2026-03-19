@@ -11,6 +11,7 @@ import ResumeSection from './ResumeSection';
 import { joinClassNames } from '../helpers/classNames';
 import { ResumeMarkdown } from '../helpers/resume-markdown';
 import useElementVisibility from '../hooks/useElementVisibility';
+import useMediaQuery from '../hooks/useMediaQuery';
 import type { ResumeRuntimeData, ResumeWorkItem } from '../data/types/resume';
 
 interface AppProps {
@@ -62,10 +63,28 @@ function App({ data, isResumeStudioPreview = false }: AppProps) {
   const educationData = data.education || [];
   const impactData = profileData.impact || [];
   const summary = profileData.summary;
+  const isBelowSmallViewport = useMediaQuery('(max-width: 640px)');
   const { isVisible: isStandalonePhotoVisible, ref: standalonePhotoRef } =
     useElementVisibility<HTMLImageElement>();
+  const shouldRenderSummaryAsFirstSection =
+    !!summary &&
+    (profileData.summaryAlwaysFirstSection || isBelowSmallViewport);
+  const shouldRenderSummaryInSidebar =
+    !!summary && !shouldRenderSummaryAsFirstSection;
   const hasSideColumn =
-    !!summary || skillsData.length > 0 || educationData.length > 0;
+    shouldRenderSummaryInSidebar || skillsData.length > 0 || educationData.length > 0;
+
+  function renderSummarySection() {
+    if (!summary) {
+      return null;
+    }
+
+    return (
+      <ResumeSection title="Summary">
+        <ResumeMarkdown markdown={summary} mode="block" />
+      </ResumeSection>
+    );
+  }
 
   return (
     <>
@@ -100,7 +119,7 @@ function App({ data, isResumeStudioPreview = false }: AppProps) {
 
         <Page.Body>
           <Page.MainContent>
-
+            {shouldRenderSummaryAsFirstSection ? renderSummarySection() : null}
             {impactData.length > 0 && (
               <ResumeSection items={impactData} title="Selected Achievements">
                 {({ getItemClassName, items }) => (
@@ -136,11 +155,7 @@ function App({ data, isResumeStudioPreview = false }: AppProps) {
 
           {hasSideColumn && (
             <Page.Sidebar placement="right">
-              {summary ? (
-                <ResumeSection title="Summary">
-                  <ResumeMarkdown markdown={summary} mode="block" />
-                </ResumeSection>
-              ) : null}
+              {shouldRenderSummaryInSidebar ? renderSummarySection() : null}
 
               {skillsData.length > 0 && (
                 <ResumeSection className="text-left" items={skillsData} title="Skills">

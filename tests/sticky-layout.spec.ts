@@ -101,6 +101,29 @@ async function getHeaderHorizontalBounds(page: Page) {
   });
 }
 
+async function getFirstMainContentSectionTestId(page: Page) {
+  return page.evaluate(() => {
+    const mainContent = document.querySelector('[data-testid="page-main-content"]');
+
+    if (!(mainContent instanceof HTMLElement)) {
+      throw new Error('Expected page main content to be present.');
+    }
+
+    const firstSection = Array.from(mainContent.children).find((child) => {
+      return (
+        child instanceof HTMLElement &&
+        child.getAttribute('data-testid')?.startsWith('resume-section-')
+      );
+    });
+
+    if (!(firstSection instanceof HTMLElement)) {
+      throw new Error('Expected a resume section in main content.');
+    }
+
+    return firstSection.getAttribute('data-testid');
+  });
+}
+
 test('normalizes boolean and configured sticky props', async () => {
   expect(normalizeStickyConfig(false)).toBeNull();
   expect(normalizeStickyConfig(true)).toEqual({
@@ -192,6 +215,23 @@ test('keeps the page header sticky while section titles remain in normal flow', 
   expect(mediumAfterStickyBounds.right).toBeCloseTo(mediumBeforeStickyBounds.right, 1);
   expect(resizedMetrics.title.stickyPosition).toBeNull();
   expect(resizedMetrics.title.position).toBe('static');
+});
+
+test('moves summary into the first main-content section below small viewports by default', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 639, height: 900 });
+  await gotoResume(page);
+
+  await expect
+    .poll(async () => getFirstMainContentSectionTestId(page))
+    .toBe('resume-section-summary');
+  await expect(
+    page.getByTestId('page-main-content').getByTestId('resume-section-summary')
+  ).toHaveCount(1);
+  await expect(
+    page.getByTestId('page-sidebar-right').getByTestId('resume-section-summary')
+  ).toHaveCount(0);
 });
 
 test('neutralizes sticky styles in print', async ({ page }) => {

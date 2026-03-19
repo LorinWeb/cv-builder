@@ -3,7 +3,11 @@ import { X } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 
 import { TextEditor } from '../TextEditor';
-import { ResumeStudioInputField, ResumeStudioSectionCard } from '../form-fields';
+import {
+  ResumeStudioCheckboxField,
+  ResumeStudioInputField,
+  ResumeStudioSectionCard,
+} from '../form-fields';
 import { ResumeStudioButton } from '../primitives';
 import type { ResumeStudioDraft } from '../../types';
 
@@ -60,6 +64,12 @@ export function ResumeStudioBasicsStep({
           name="basics.summary"
           placeholder="Explain your strengths, scope, and the kind of work you want next."
           testId="resume-studio-field-basics-summary"
+        />
+        <ResumeStudioCheckboxField
+          className="mt-3"
+          label="Alway show as first section"
+          name="basics.summaryAlwaysFirstSection"
+          testId="resume-studio-field-basics-summary-first-section"
         />
       </ResumeStudioSectionCard>
 

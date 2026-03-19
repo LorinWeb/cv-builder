@@ -56,13 +56,13 @@ export function mergeResumeStudioDraft(
   source: ResumeStudioDraft,
   patch: Partial<ResumeStudioDraft>
 ): ResumeStudioDraft {
-  const nextBasics = {
+  const nextBasics: ResumeStudioDraft['basics'] = {
     ...source.basics,
   };
 
   for (const [key, value] of Object.entries(patch.basics || {})) {
     if (value !== undefined) {
-      nextBasics[key as keyof ResumeStudioDraft['basics']] = value;
+      (nextBasics as unknown as Record<string, unknown>)[key] = value;
     }
   }
 
