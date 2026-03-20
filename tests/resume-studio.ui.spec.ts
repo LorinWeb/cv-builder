@@ -213,8 +213,10 @@ test.describe.serial('Resume Studio dev flow', () => {
     await expect(page.getByTestId('resume-studio-launcher')).toHaveText('Edit resume');
 
     await summaryPlacementToggle.evaluate((element) => {
-      (element as HTMLElement).click();
+      (element as HTMLInputElement).click();
     });
+    await expect(summaryPlacementToggle).toBeChecked();
+    await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
     await expect(summaryPlacementToggle).toBeChecked();
     await expect
       .poll(() => firstSectionTestId(liveMainContent))
@@ -383,7 +385,7 @@ test.describe.serial('Resume Studio dev flow', () => {
     await page.getByRole('button', { name: 'Basics' }).click();
     await page.getByLabel('Title').fill('Principal Engineer');
     await summaryPlacementToggle.evaluate((element) => {
-      (element as HTMLElement).click();
+      (element as HTMLInputElement).click();
     });
     await expect(previewFrame.getByTestId('profile-subtitle')).toHaveText(
       'Principal Engineer'
