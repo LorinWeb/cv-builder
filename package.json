@@ -38,7 +38,7 @@
     "remark-gfm": "^4.0.1"
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "portless cv-builder vite",
     "build": "vite build",
     "preview": "vite preview",
     "preview:visual": "vite preview --host 127.0.0.1 --port 4173",
