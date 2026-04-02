@@ -1,6 +1,6 @@
 # CV Builder
 
-This repo contains the code for a resume site template. It ships with public sample data by default and automatically switches to a private local JSON file when you create one. Used ship my CV on https://lorin.live
+This repo contains the code for a resume site template. It ships with public sample data by default and automatically switches to a private local JSON file when you create one.
 
 ## Quick Start
 
