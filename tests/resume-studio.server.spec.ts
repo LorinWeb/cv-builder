@@ -42,18 +42,8 @@ test.describe.serial('Resume Studio server validation', () => {
     projectRoot = createTempProjectRoot('resume-studio-server-');
     writeProjectFile(
       projectRoot,
-      'src/data/resume.sample.json',
-      JSON.stringify(
-        {
-          basics: {
-            label: 'Template Engineer',
-            name: 'John Doe',
-            summary: 'Template summary',
-          },
-        },
-        null,
-        2
-      )
+      'src/data/resume.md',
+      '# John Doe\n\nTemplate summary'
     );
 
     const config: InlineConfig = {
@@ -87,25 +77,11 @@ test.describe.serial('Resume Studio server validation', () => {
     destroyTempProjectRoot(projectRoot);
   });
 
-  test('rejects manual drafts without markdown', async () => {
-    const initResponse = await fetch(`http://127.0.0.1:${devServerPort}/__resume-studio/init`, {
-      method: 'POST',
-    });
-    const initializedState = (await initResponse.json()) as {
-      draft: {
-        basics: {
-          label: string;
-          name: string;
-          summary: string;
-        };
-      };
-    };
-
+  test('rejects drafts without markdown', async () => {
     const response = await fetch(`http://127.0.0.1:${devServerPort}/__resume-studio/draft`, {
       body: JSON.stringify({
         draft: {
-          ...initializedState.draft,
-          mode: 'manual',
+          markdown: '   ',
         },
       }),
       headers: {
@@ -120,8 +96,6 @@ test.describe.serial('Resume Studio server validation', () => {
 
     expect(response.status).toBe(400);
     expect(payload.error).toBe('Resume draft failed validation.');
-    expect(payload.fieldErrors?.['manual.markdown']).toBe(
-      'Manual resume markdown is required when mode is manual.'
-    );
+    expect(payload.fieldErrors?.markdown).toBe('Resume markdown is required.');
   });
 });

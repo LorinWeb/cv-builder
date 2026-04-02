@@ -1,9 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Connect, Plugin } from 'vite';
 
-import { resumeDataSchema } from '../../../data/resume-schema';
-import type { ResumeSourceData } from '../../../data/types/resume';
 import { RESUME_STUDIO_API_ROOT } from '../constants';
+import { getResumeStudioDraftFieldErrors } from '../draft';
 import type {
   ResumeStudioApiErrorPayload,
   ResumeStudioCreateVersionPayload,
@@ -47,21 +46,6 @@ async function readJsonBody<T>(request: IncomingMessage): Promise<T> {
   return JSON.parse(Buffer.concat(chunks).toString('utf8')) as T;
 }
 
-function getFieldErrors(data: unknown) {
-  const parsed = resumeDataSchema.safeParse(data);
-
-  if (parsed.success) {
-    return null;
-  }
-
-  return Object.fromEntries(
-    parsed.error.issues.map((issue) => [
-      issue.path.join('.') || 'root',
-      issue.message,
-    ])
-  );
-}
-
 function getVersionId(pathname: string) {
   const versionId = pathname.split('/')[3];
 
@@ -101,14 +85,14 @@ export function resumeStudioPlugin(projectRoot: string): Plugin {
 
       if (request.method === 'PUT' && url.pathname === `${RESUME_STUDIO_API_ROOT}/draft`) {
         const payload = await readJsonBody<ResumeStudioDraftPayload>(request);
-        const fieldErrors = getFieldErrors(payload.draft);
+        const fieldErrors = getResumeStudioDraftFieldErrors(payload.draft);
 
         if (fieldErrors) {
           sendError(response, 400, 'Resume draft failed validation.', fieldErrors);
           return;
         }
 
-        sendJson(response, 200, store.saveDraft(payload.draft as ResumeSourceData));
+        sendJson(response, 200, store.saveDraft(payload.draft));
         return;
       }
 

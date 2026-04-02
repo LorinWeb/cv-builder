@@ -1,5 +1,4 @@
 import type { ResumeSourceData } from '../../data/types/resume';
-import { redactResumeData } from '../pdf-download/build';
 import {
   RESUME_STUDIO_API_ROOT,
   RESUME_STUDIO_PREVIEW_MESSAGE_TYPE,
@@ -18,7 +17,7 @@ import type {
 export const RESUME_STUDIO_PREVIEW_EVENT = 'resume-studio:preview-data';
 
 interface ResumeStudioPreviewMessage {
-  data: ReturnType<typeof redactResumeData>;
+  data: ResumeSourceData;
   type: typeof RESUME_STUDIO_PREVIEW_MESSAGE_TYPE;
 }
 
@@ -106,10 +105,6 @@ export function getResumeStudioPreviewUrl() {
   return url.toString();
 }
 
-function toResumeStudioPreviewData(data: ResumeSourceData) {
-  return redactResumeData(data);
-}
-
 function clampScrollProgress(progress: number) {
   if (!Number.isFinite(progress)) {
     return 0;
@@ -140,7 +135,7 @@ export function createResumeStudioPreviewMessage(
   data: ResumeSourceData
 ): ResumeStudioPreviewMessage {
   return {
-    data: toResumeStudioPreviewData(data),
+    data,
     type: RESUME_STUDIO_PREVIEW_MESSAGE_TYPE,
   };
 }
@@ -255,7 +250,7 @@ export function publishResumeStudioPreview(data: ResumeSourceData) {
 
   window.dispatchEvent(
     new CustomEvent(RESUME_STUDIO_PREVIEW_EVENT, {
-      detail: toResumeStudioPreviewData(data),
+      detail: data,
     })
   );
 }

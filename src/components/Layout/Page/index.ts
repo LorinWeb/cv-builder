@@ -1,2 +1,1 @@
-export { default } from './Page';
-export type { PageHeaderProps } from './Page';
+export { Page as default } from './Page';

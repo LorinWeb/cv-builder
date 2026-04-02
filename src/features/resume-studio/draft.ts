@@ -1,5 +1,4 @@
 import type { ResumeSourceData } from '../../data/types/resume';
-import { createManualResumeMarkdown } from '../../helpers/manual-resume';
 import type { ResumeStudioDraft } from './types';
 
 export function normalizeResumeStudioMarkdown(markdown: string) {
@@ -29,24 +28,29 @@ export function normalizeResumeStudioMarkdown(markdown: string) {
     .join('\n');
 }
 
+export function getResumeStudioDraftFieldErrors(data: unknown) {
+  const markdown =
+    data && typeof data === 'object' && 'markdown' in data
+      ? (data as { markdown?: unknown }).markdown
+      : undefined;
+
+  if (typeof markdown !== 'string' || markdown.trim().length === 0) {
+    return {
+      markdown: 'Resume markdown is required.',
+    };
+  }
+
+  return null;
+}
+
 export function toResumeStudioDraft(data: ResumeSourceData): ResumeStudioDraft {
   return {
-    markdown:
-      data.mode === 'manual' && data.manual?.markdown
-        ? normalizeResumeStudioMarkdown(data.manual.markdown)
-        : normalizeResumeStudioMarkdown(createManualResumeMarkdown(data)),
+    markdown: normalizeResumeStudioMarkdown(data.markdown),
   };
 }
 
-export function applyResumeStudioDraft(
-  source: ResumeSourceData,
-  draft: ResumeStudioDraft
-): ResumeSourceData {
+export function applyResumeStudioDraft(draft: ResumeStudioDraft): ResumeSourceData {
   return {
-    ...source,
-    manual: {
-      markdown: normalizeResumeStudioMarkdown(draft.markdown),
-    },
-    mode: 'manual',
+    markdown: normalizeResumeStudioMarkdown(draft.markdown),
   };
 }

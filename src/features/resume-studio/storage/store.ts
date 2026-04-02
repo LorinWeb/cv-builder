@@ -1,31 +1,15 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+
+import { loadResumeData } from '../../../data/load-resume-data';
 import type { ResumeSourceData } from '../../../data/types/resume';
 import {
+  RESUME_STUDIO_DB_PATH,
   RESUME_STUDIO_DEFAULT_IMPORTED_VERSION_NAME,
-  RESUME_STUDIO_DEFAULT_PRIMARY_VERSION_NAME,
-  RESUME_STUDIO_DEFAULT_RECOVERED_VERSION_NAME,
+  RESUME_STUDIO_MARKDOWN_PATH,
 } from '../constants';
 import type { ResumeStudioState } from '../types';
-import {
-  readResumeStudioPrivateData,
-  resolveResumeStudioPaths,
-  writeResumeStudioPrivateData,
-} from './json-sync';
 import { SqliteResumeStudioStore } from './sqlite-store';
-
-function createResumeStudioStarterData(): ResumeSourceData {
-  return {
-    basics: {
-      label: 'Your next role title',
-      name: 'Your Name',
-      summary:
-        'Write a concise summary that explains your strengths, your focus area, and the kind of work you want next.',
-    },
-    education: [],
-    mode: 'structured',
-    skills: [],
-    work: [],
-  };
-}
 
 interface ResumeStudioStoreController {
   close(): void;
@@ -42,11 +26,25 @@ function nowIsoString() {
   return new Date().toISOString();
 }
 
+function resolveResumeStudioPaths(projectRoot: string) {
+  return {
+    databasePath: path.resolve(projectRoot, RESUME_STUDIO_DB_PATH),
+    markdownPath: path.resolve(projectRoot, RESUME_STUDIO_MARKDOWN_PATH),
+  };
+}
+
+function writePublishedResumeMarkdown(projectRoot: string, data: ResumeSourceData) {
+  const { markdownPath } = resolveResumeStudioPaths(projectRoot);
+
+  mkdirSync(path.dirname(markdownPath), { recursive: true });
+  writeFileSync(markdownPath, `${data.markdown.trimEnd()}\n`);
+}
+
 function areResumeDataEqual(
   left: ResumeSourceData | null,
   right: ResumeSourceData | null
 ) {
-  return JSON.stringify(left) === JSON.stringify(right);
+  return left?.markdown === right?.markdown;
 }
 
 export function createResumeStudioStore(
@@ -69,44 +67,29 @@ export function createResumeStudioStore(
     storage = null;
   }
 
-  function setActiveVersion(id: number | null) {
-    getStorage().setActiveVersion(id);
-  }
+  function ensureSeededFromPublishedResume() {
+    const store = getStorage();
 
-  function publishVersionAndSync(
-    versionId: number,
-    data: ResumeSourceData,
-    updatedAt: string,
-    writePrivateData = true
-  ) {
-    getStorage().setPublishedVersion(versionId, data, updatedAt);
-
-    if (writePrivateData) {
-      writeResumeStudioPrivateData(projectRoot, data);
-    }
-  }
-
-  function activateVersionAndSync(
-    versionId: number,
-    data: ResumeSourceData,
-    updatedAt: string,
-    writePrivateData = true
-  ) {
-    setActiveVersion(versionId);
-    publishVersionAndSync(versionId, data, updatedAt, writePrivateData);
-  }
-
-  function getActiveVersionOrThrow(errorMessage: string) {
-    const activeVersion = getStorage().getActiveVersion();
-
-    if (!activeVersion) {
-      throw new Error(errorMessage);
+    if (store.listVersions().length > 0) {
+      return;
     }
 
-    return activeVersion;
+    const publishedResume = loadResumeData({ projectRoot });
+    const timestamp = nowIsoString();
+    const versionId = store.createVersion(
+      RESUME_STUDIO_DEFAULT_IMPORTED_VERSION_NAME,
+      publishedResume,
+      timestamp,
+      timestamp
+    );
+
+    store.setActiveVersion(versionId);
+    store.setPublishedVersion(versionId, publishedResume, timestamp);
   }
 
   function getDraftState(): ResumeStudioState {
+    ensureSeededFromPublishedResume();
+
     const activeVersion = getStorage().getActiveVersion();
     const publishedState = getStorage().getPublishedState();
 
@@ -146,111 +129,30 @@ export function createResumeStudioStore(
     };
   }
 
-  function maybeImportExistingPrivateResume() {
-    const store = getStorage();
-    const activeVersion = store.getActiveVersion();
-    const publishedState = store.getPublishedState();
-    const privateData = readResumeStudioPrivateData(projectRoot);
+  function getActiveVersionOrThrow(errorMessage: string) {
+    const activeVersion = getStorage().getActiveVersion();
 
-    if (activeVersion && publishedState) {
-      if (!privateData) {
-        writeResumeStudioPrivateData(projectRoot, publishedState.data);
-      }
-      return;
+    if (!activeVersion) {
+      throw new Error(errorMessage);
     }
 
-    if (activeVersion && !publishedState) {
-      activateVersionAndSync(
-        activeVersion.id,
-        privateData || activeVersion.data,
-        activeVersion.updatedAt,
-        !privateData
-      );
-      return;
-    }
-
-    const legacyDraft = store.getLegacyDraft();
-
-    if (legacyDraft) {
-      const versionId = store.createVersion(
-        RESUME_STUDIO_DEFAULT_RECOVERED_VERSION_NAME,
-        legacyDraft.data,
-        legacyDraft.updatedAt,
-        legacyDraft.updatedAt
-      );
-
-      activateVersionAndSync(versionId, legacyDraft.data, legacyDraft.updatedAt);
-      return;
-    }
-
-    const existingVersions = store.listVersions();
-
-    if (existingVersions.length > 0) {
-      const version = store.getVersion(existingVersions[0].id);
-
-      if (!version) {
-        throw new Error('Resume Studio could not restore the existing version state.');
-      }
-
-      activateVersionAndSync(
-        version.id,
-        privateData || version.data,
-        version.updatedAt,
-        !privateData
-      );
-      return;
-    }
-
-    if (!privateData) {
-      return;
-    }
-
-    const timestamp = nowIsoString();
-    const versionId = store.createVersion(
-      RESUME_STUDIO_DEFAULT_IMPORTED_VERSION_NAME,
-      privateData,
-      timestamp,
-      timestamp
-    );
-
-    activateVersionAndSync(versionId, privateData, timestamp, false);
+    return activeVersion;
   }
 
   function getState() {
-    maybeImportExistingPrivateResume();
-
     return getDraftState();
   }
 
   function initializeDraft() {
-    const currentState = getState();
-
-    if (currentState.isInitialized) {
-      return currentState;
-    }
-
-    const data = createResumeStudioStarterData();
-    const timestamp = nowIsoString();
-    const versionId = getStorage().createVersion(
-      RESUME_STUDIO_DEFAULT_PRIMARY_VERSION_NAME,
-      data,
-      timestamp,
-      timestamp
-    );
-
-    activateVersionAndSync(versionId, data, timestamp);
-
     return getState();
   }
 
   function saveDraft(data: ResumeSourceData) {
     const activeVersion = getActiveVersionOrThrow(
-      'Cannot save before an editable CV version exists.'
+      'Cannot save before an editable resume version exists.'
     );
 
-    const timestamp = nowIsoString();
-
-    getStorage().updateVersion(activeVersion.id, data, timestamp);
+    getStorage().updateVersion(activeVersion.id, data, nowIsoString());
 
     return getState();
   }
@@ -263,7 +165,7 @@ export function createResumeStudioStore(
     }
 
     const activeVersion = getActiveVersionOrThrow(
-      'Cannot create a version before an editable CV version exists.'
+      'Cannot create a version before an editable resume version exists.'
     );
 
     const versionId = getStorage().createVersion(
@@ -272,17 +174,18 @@ export function createResumeStudioStore(
       nowIsoString()
     );
 
-    setActiveVersion(versionId);
+    getStorage().setActiveVersion(versionId);
 
     return getState();
   }
 
   function publishActiveVersion() {
     const activeVersion = getActiveVersionOrThrow(
-      'Cannot publish before an editable CV version exists.'
+      'Cannot publish before an editable resume version exists.'
     );
 
-    publishVersionAndSync(
+    writePublishedResumeMarkdown(projectRoot, activeVersion.data);
+    getStorage().setPublishedVersion(
       activeVersion.id,
       activeVersion.data,
       activeVersion.updatedAt
@@ -309,7 +212,7 @@ export function createResumeStudioStore(
       const nextActiveVersionId =
         publishedState?.id || store.listVersions()[0]?.id || null;
 
-      setActiveVersion(nextActiveVersionId);
+      store.setActiveVersion(nextActiveVersionId);
     }
 
     store.deleteVersion(id);
@@ -324,7 +227,7 @@ export function createResumeStudioStore(
       throw new Error(`Resume Studio version ${id} was not found.`);
     }
 
-    setActiveVersion(id);
+    getStorage().setActiveVersion(id);
 
     return getState();
   }

@@ -1,19 +1,12 @@
 :root {
   --color-primary: #018741;
   --color-secondary: #4a7f7a;
-  --color-header-border: rgb(150.2144 193.9856 190.0064);
-  --color-main-border: rgb(137.3216 186.4784 182.0096);
   --color-ambient-primary: var(--color-primary);
-  --color-section-title: var(--color-secondary);
-  --color-section-subtitle: var(--color-secondary);
   --color-experience-headline: #07a135;
-  --color-company-role: var(--color-primary);
-  --color-company-name: var(--color-secondary);
   --color-text-strong: var(--color-primary);
   --color-text-muted: var(--color-secondary);
   --color-text-body: #17312a;
   --color-text-placeholder: rgba(23, 49, 42, 0.52);
-  --color-fill-strong: var(--color-primary);
   --color-surface-base: #ffffff;
   --color-surface-subtle: rgba(242, 246, 241, 0.76);
   --color-surface-panel: rgba(247, 250, 247, 0.94);
@@ -28,7 +21,6 @@
   --color-border-readonly: rgba(74, 127, 122, 0.2);
   --color-border-emphasis: rgba(74, 127, 122, 0.16);
   --color-border-thumbnail: rgba(74, 127, 122, 0.18);
-  --color-border-photo: rgba(137, 186, 182, 0.45);
   --color-border-strong: rgba(74, 127, 122, 0.35);
   --color-border-success: rgba(1, 135, 65, 0.16);
   --color-text-success: var(--color-primary);
@@ -62,8 +54,8 @@ body {
 
 body {
   color: #222;
-  font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  font-family: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
   font-weight: 300;
   line-height: 1.3rem;
   overflow-x: hidden;
@@ -88,7 +80,7 @@ h1 {
   font-size: 2em;
   font-weight: 300;
   line-height: 1.45rem;
-  margin: 0.40em 0;
+  margin: 0.4em 0;
 }
 
 h5 {

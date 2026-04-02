@@ -5,24 +5,19 @@ import { DatabaseSync } from 'node:sqlite';
 import type { ResumeSourceData } from '../../../data/types/resume';
 import type { ResumeVersionSummary } from '../types';
 
-interface DraftRecord {
-  data_json: string;
-  updated_at: string;
-}
-
 interface VersionRecord {
   created_at: string;
-  data_json: string;
   id: number;
   is_active?: number;
   is_published?: number;
+  markdown_text: string;
   name: string;
   updated_at: string;
 }
 
 interface MetaRecord {
   active_version_id: number | null;
-  published_data_json: string | null;
+  published_markdown_text: string | null;
   published_updated_at: string | null;
   published_version_id: number | null;
 }
@@ -31,80 +26,78 @@ function ensureResumeStudioDirectory(filePath: string) {
   mkdirSync(path.dirname(filePath), { recursive: true });
 }
 
+function tableExists(database: DatabaseSync, tableName: string) {
+  const record = database
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?"
+    )
+    .get(tableName) as { name: string } | undefined;
+
+  return Boolean(record);
+}
+
 function getTableColumns(database: DatabaseSync, tableName: string) {
+  if (!tableExists(database, tableName)) {
+    return [];
+  }
+
   return database.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{
     name: string;
   }>;
 }
 
-function ensureResumeStudioSchema(database: DatabaseSync) {
+function resetLegacySchema(database: DatabaseSync) {
+  database.exec('PRAGMA foreign_keys = OFF;');
   database.exec(`
-    PRAGMA journal_mode = WAL;
-    CREATE TABLE IF NOT EXISTS resume_draft (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      data_json TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
+    DROP TABLE IF EXISTS resume_studio_meta;
+    DROP TABLE IF EXISTS resume_versions;
+    DROP TABLE IF EXISTS resume_draft;
+  `);
+  database.exec('PRAGMA foreign_keys = ON;');
+}
+
+function ensureResumeStudioSchema(database: DatabaseSync) {
+  database.exec('PRAGMA journal_mode = WAL;');
+
+  const hasLegacyDraft = tableExists(database, 'resume_draft');
+  const versionColumns = getTableColumns(database, 'resume_versions');
+  const metaColumns = getTableColumns(database, 'resume_studio_meta');
+  const usesMarkdownVersions = versionColumns.some((column) => column.name === 'markdown_text');
+  const usesMarkdownMeta = metaColumns.some(
+    (column) => column.name === 'published_markdown_text'
+  );
+
+  if (
+    hasLegacyDraft ||
+    (versionColumns.length > 0 && !usesMarkdownVersions) ||
+    (metaColumns.length > 0 && !usesMarkdownMeta)
+  ) {
+    resetLegacySchema(database);
+  }
+
+  database.exec(`
     CREATE TABLE IF NOT EXISTS resume_versions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       created_at TEXT NOT NULL,
-      updated_at TEXT,
-      data_json TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      markdown_text TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS resume_studio_meta (
       id INTEGER PRIMARY KEY CHECK (id = 1),
       active_version_id INTEGER REFERENCES resume_versions(id),
       published_version_id INTEGER REFERENCES resume_versions(id),
-      published_data_json TEXT,
+      published_markdown_text TEXT,
       published_updated_at TEXT
     );
-  `);
-
-  const versionColumns = getTableColumns(database, 'resume_versions');
-  const metaColumns = getTableColumns(database, 'resume_studio_meta');
-
-  if (!versionColumns.some((column) => column.name === 'updated_at')) {
-    database.exec('ALTER TABLE resume_versions ADD COLUMN updated_at TEXT;');
-  }
-
-  if (!metaColumns.some((column) => column.name === 'published_version_id')) {
-    database.exec(
-      'ALTER TABLE resume_studio_meta ADD COLUMN published_version_id INTEGER REFERENCES resume_versions(id);'
-    );
-  }
-
-  if (!metaColumns.some((column) => column.name === 'published_data_json')) {
-    database.exec('ALTER TABLE resume_studio_meta ADD COLUMN published_data_json TEXT;');
-  }
-
-  if (!metaColumns.some((column) => column.name === 'published_updated_at')) {
-    database.exec('ALTER TABLE resume_studio_meta ADD COLUMN published_updated_at TEXT;');
-  }
-
-  database.exec(`
-    UPDATE resume_versions
-    SET updated_at = created_at
-    WHERE updated_at IS NULL OR updated_at = '';
     INSERT INTO resume_studio_meta (id, active_version_id)
     VALUES (1, NULL)
     ON CONFLICT(id) DO NOTHING;
-    UPDATE resume_studio_meta
-    SET
-      published_version_id = active_version_id,
-      published_data_json = (
-        SELECT data_json
-        FROM resume_versions
-        WHERE id = resume_studio_meta.active_version_id
-      ),
-      published_updated_at = (
-        SELECT updated_at
-        FROM resume_versions
-        WHERE id = resume_studio_meta.active_version_id
-      )
-    WHERE published_version_id IS NULL
-      AND active_version_id IS NOT NULL;
   `);
+}
+
+function toResumeData(markdown: string): ResumeSourceData {
+  return { markdown };
 }
 
 export class SqliteResumeStudioStore {
@@ -118,46 +111,6 @@ export class SqliteResumeStudioStore {
 
   close() {
     this.database.close();
-  }
-
-  getLegacyDraft() {
-    const record = this.database
-      .prepare('SELECT data_json, updated_at FROM resume_draft WHERE id = 1')
-      .get() as DraftRecord | undefined;
-
-    if (!record) {
-      return null;
-    }
-
-    return {
-      data: JSON.parse(record.data_json) as ResumeSourceData,
-      updatedAt: record.updated_at,
-    };
-  }
-
-  getMeta() {
-    const record = this.database
-      .prepare(
-        `
-          SELECT
-            active_version_id,
-            published_version_id,
-            published_data_json,
-            published_updated_at
-          FROM resume_studio_meta
-          WHERE id = 1
-        `
-      )
-      .get() as MetaRecord | undefined;
-
-    return (
-      record || {
-        active_version_id: null,
-        published_data_json: null,
-        published_updated_at: null,
-        published_version_id: null,
-      }
-    );
   }
 
   listVersions(): ResumeVersionSummary[] {
@@ -200,7 +153,7 @@ export class SqliteResumeStudioStore {
   getVersion(id: number) {
     const record = this.database
       .prepare(
-        'SELECT id, name, created_at, updated_at, data_json FROM resume_versions WHERE id = ?'
+        'SELECT id, name, created_at, updated_at, markdown_text FROM resume_versions WHERE id = ?'
       )
       .get(id) as VersionRecord | undefined;
 
@@ -210,7 +163,7 @@ export class SqliteResumeStudioStore {
 
     return {
       createdAt: record.created_at,
-      data: JSON.parse(record.data_json) as ResumeSourceData,
+      data: toResumeData(record.markdown_text),
       id: record.id,
       name: record.name,
       updatedAt: record.updated_at,
@@ -226,7 +179,7 @@ export class SqliteResumeStudioStore {
             resume_versions.name,
             resume_versions.created_at,
             resume_versions.updated_at,
-            resume_versions.data_json
+            resume_versions.markdown_text
           FROM resume_versions
           INNER JOIN resume_studio_meta
             ON resume_studio_meta.id = 1
@@ -241,7 +194,7 @@ export class SqliteResumeStudioStore {
 
     return {
       createdAt: record.created_at,
-      data: JSON.parse(record.data_json) as ResumeSourceData,
+      data: toResumeData(record.markdown_text),
       id: record.id,
       name: record.name,
       updatedAt: record.updated_at,
@@ -249,11 +202,24 @@ export class SqliteResumeStudioStore {
   }
 
   getPublishedState() {
-    const meta = this.getMeta();
+    const meta = this.database
+      .prepare(
+        `
+          SELECT
+            active_version_id,
+            published_version_id,
+            published_markdown_text,
+            published_updated_at
+          FROM resume_studio_meta
+          WHERE id = 1
+        `
+      )
+      .get() as MetaRecord | undefined;
 
     if (
+      !meta ||
       meta.published_version_id === null ||
-      !meta.published_data_json ||
+      !meta.published_markdown_text ||
       !meta.published_updated_at
     ) {
       return null;
@@ -268,7 +234,7 @@ export class SqliteResumeStudioStore {
     }
 
     return {
-      data: JSON.parse(meta.published_data_json) as ResumeSourceData,
+      data: toResumeData(meta.published_markdown_text),
       id: version.id,
       name: version.name,
       updatedAt: meta.published_updated_at,
@@ -281,14 +247,14 @@ export class SqliteResumeStudioStore {
         `
           UPDATE resume_versions
           SET
-            data_json = @data_json,
+            markdown_text = @markdown_text,
             updated_at = @updated_at
           WHERE id = @id
         `
       )
       .run({
-        data_json: JSON.stringify(data),
         id,
+        markdown_text: data.markdown,
         updated_at: updatedAt,
       });
   }
@@ -301,9 +267,9 @@ export class SqliteResumeStudioStore {
   ) {
     const result = this.database
       .prepare(
-        'INSERT INTO resume_versions (name, created_at, updated_at, data_json) VALUES (?, ?, ?, ?)'
+        'INSERT INTO resume_versions (name, created_at, updated_at, markdown_text) VALUES (?, ?, ?, ?)'
       )
-      .run(name, createdAt, updatedAt, JSON.stringify(data));
+      .run(name, createdAt, updatedAt, data.markdown);
 
     return Number(result.lastInsertRowid);
   }
@@ -339,18 +305,18 @@ export class SqliteResumeStudioStore {
             id,
             active_version_id,
             published_version_id,
-            published_data_json,
+            published_markdown_text,
             published_updated_at
           )
-          VALUES (1, NULL, @published_version_id, @published_data_json, @published_updated_at)
+          VALUES (1, NULL, @published_version_id, @published_markdown_text, @published_updated_at)
           ON CONFLICT(id) DO UPDATE SET
             published_version_id = excluded.published_version_id,
-            published_data_json = excluded.published_data_json,
+            published_markdown_text = excluded.published_markdown_text,
             published_updated_at = excluded.published_updated_at
         `
       )
       .run({
-        published_data_json: JSON.stringify(data),
+        published_markdown_text: data.markdown,
         published_updated_at: updatedAt,
         published_version_id: id,
       });

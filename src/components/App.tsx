@@ -1,10 +1,8 @@
 import { Suspense, lazy, useEffect, useRef, type ReactNode, type RefObject } from 'react';
 
 import { AmbientDesignLayer } from './AmbientDesignLayer';
-import { ManualResume } from './ManualResume';
-import { StructuredResume } from './StructuredResume';
+import { MarkdownResume } from './MarkdownResume';
 import type { ResumeRuntimeData } from '../data/types/resume';
-import { getResumeMode } from '../helpers/manual-resume';
 import {
   createResumeStudioScrollSyncReadyMessage,
   createResumeStudioScrollSyncUpdateMessage,
@@ -207,21 +205,23 @@ function ResumeStudioPreviewScrollArea({ children }: { children: ReactNode }) {
 }
 
 function App({ data, isResumeStudioPreview = false }: AppProps) {
-  const isManualResume = getResumeMode(data) === 'manual';
-  const resumeContent = isManualResume ? (
-    <ManualResume data={data} isResumeStudioPreview={isResumeStudioPreview} />
-  ) : (
-    <StructuredResume data={data} />
+  const resumeContent = (
+    <MarkdownResume data={data} isResumeStudioPreview={isResumeStudioPreview} />
   );
 
   if (isResumeStudioPreview) {
-    return <ResumeStudioPreviewScrollArea>{resumeContent}</ResumeStudioPreviewScrollArea>;
+    return (
+      <>
+        <AmbientDesignLayer />
+        <ResumeStudioPreviewScrollArea>{resumeContent}</ResumeStudioPreviewScrollArea>
+      </>
+    );
   }
 
   return (
     <>
       <ResumeStudioLauncherSlot />
-      {!isManualResume ? <AmbientDesignLayer /> : null}
+      <AmbientDesignLayer />
       {resumeContent}
     </>
   );

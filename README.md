@@ -1,55 +1,40 @@
 # CV Builder
 
-This repo contains the code for a resume site template. It ships with public sample data by default and automatically switches to a private local JSON file when you create one.
+This repo now runs on a single markdown resume source: `src/data/resume.md`.
 
 ## Quick Start
 
 ```bash
-# Install dependencies
 npm install
-
-# Start development server with the committed sample resume data
 npm run dev
+```
 
-# Build for production
+Useful commands:
+
+```bash
 npm run build
-
-# Preview production build
 npm run preview
+npm run typecheck
+npm run lint
 ```
 
-## Resume Data Setup
+## Resume Source
 
-Copy `src/data/resume.sample.json` to `src/data/resume.private.json`, then edit `src/data/resume.private.json`.
+Edit `src/data/resume.md` directly if you want to change the published resume by hand.
 
-When `src/data/resume.private.json` exists, the app uses it automatically. Otherwise it falls back to the sample data.
+The app, preview, SEO metadata, and PDF output all read from that same markdown file. There is no structured JSON resume model anymore, and there is no sample/private fallback pair.
 
-Your resume data may include `basics.email` and `basics.phone`. The public web build strips `email` and `phone` out of the browser bundle so they are not rendered on the live page.
+## Resume Studio
 
-## Profile Photo Setup
+Resume Studio is a local markdown authoring overlay available in development. It keeps version history in sqlite under `src/data/local/resume-studio.sqlite` and publishes the active version back to `src/data/resume.md`.
 
-The public sample resume includes a committed placeholder portrait at `public/static/profile-placeholder.jpg`. It shows the intended portrait crop and frame for consumers of the template.
+The studio is markdown-only:
 
-To use a private local photo without committing it:
+1. Open the floating launcher.
+2. Edit the full document markdown.
+3. Let autosave persist the local draft history.
+4. Publish when you want to update `src/data/resume.md`.
 
-1. Place the real image at `public/static/private/profile.jpg`
-2. Point your private resume JSON at that file:
+## PDF Download
 
-```json
-{
-  "basics": {
-    "photo": {
-      "src": "/static/private/profile.jpg",
-      "alt": "Portrait of Your Name"
-    }
-  }
-}
-```
-
-The `public/static/private/` directory is ignored by git. If `basics.photo.src` points to a local `/static/...` file, the build validates that the file exists under `public/` and fails with a clear error if it does not.
-
-## PDF Download Feature
-
-A downloadable PDF copy of the CV is generated during dev and production builds.
-
-That PDF can contain private contact details, while the live web version excludes `email` and `phone` from the shipped client bundle so the information is harder to harvest by spam bots and malicious actors.
+A downloadable PDF copy of the resume is generated during development and production builds. Because the app is markdown-only, the web page, preview, and PDF all render the same document content.

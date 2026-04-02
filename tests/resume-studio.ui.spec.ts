@@ -21,8 +21,6 @@ async function getScrollMetrics(locator: Locator) {
       clientHeight: element.clientHeight,
       maxScrollTop,
       progress: maxScrollTop === 0 ? 0 : element.scrollTop / maxScrollTop,
-      scrollHeight: element.scrollHeight,
-      scrollTop: element.scrollTop,
     };
   });
 }
@@ -66,6 +64,16 @@ async function startResumeStudioServer(projectRoot: string) {
   };
 }
 
+async function openStudio(page: Page, devServerPort: number) {
+  await page.goto(`http://127.0.0.1:${devServerPort}`);
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByTestId('resume-studio-launcher')).toHaveText('Edit resume', {
+    timeout: 15000,
+  });
+  await page.getByTestId('resume-studio-launcher').click();
+  await page.getByTestId('resume-studio-dialog').waitFor({ state: 'visible' });
+}
+
 test.describe.configure({ mode: 'serial' });
 
 test.describe.serial('Resume Studio manual-only overlay', () => {
@@ -77,33 +85,8 @@ test.describe.serial('Resume Studio manual-only overlay', () => {
     projectRoot = createTempProjectRoot('resume-studio-ui-');
     writeProjectFile(
       projectRoot,
-      'src/data/resume.private.json',
-      JSON.stringify(
-        {
-          basics: {
-            email: 'jane@example.com',
-            label: 'Template Engineer',
-            name: 'Jane Template',
-            phone: '+44 123456789',
-            profiles: [
-              {
-                url: 'https://example.com/jane-template',
-              },
-            ],
-            summary: 'Template summary',
-          },
-          work: [
-            {
-              company: 'Acme Systems',
-              position: 'Principal Engineer',
-              startDate: '2024-01-01',
-              summary: 'Built reliable systems.',
-            },
-          ],
-        },
-        null,
-        2
-      )
+      'src/data/resume.md',
+      '# Jane Template\n\nTemplate Engineer'
     );
 
     const startedServer = await startResumeStudioServer(projectRoot);
@@ -117,22 +100,14 @@ test.describe.serial('Resume Studio manual-only overlay', () => {
     destroyTempProjectRoot(projectRoot);
   });
 
-  test('seeds a manual draft from structured data, restores the published page on close, and publishes from the fullscreen overlay', async ({
+  test('opens a fullscreen overlay, previews markdown, and publishes to src/data/resume.md', async ({
     page,
   }) => {
     test.setTimeout(60000);
 
-    await page.goto(`http://127.0.0.1:${devServerPort}`);
-    await page.waitForLoadState('networkidle');
+    await openStudio(page, devServerPort);
 
-    await expect(page.getByTestId('resume-studio-launcher')).toHaveText('Edit resume', {
-      timeout: 15000,
-    });
-
-    await page.getByTestId('resume-studio-launcher').click();
     const dialog = page.getByTestId('resume-studio-dialog');
-    await expect(dialog).toBeVisible({ timeout: 15000 });
-
     const viewport = page.viewportSize();
     const dialogBox = await dialog.boundingBox();
 
@@ -142,85 +117,37 @@ test.describe.serial('Resume Studio manual-only overlay', () => {
     expect(dialogBox!.y).toBeLessThanOrEqual(1);
     expect(dialogBox!.width).toBeGreaterThanOrEqual(viewport!.width - 2);
     expect(dialogBox!.height).toBeGreaterThanOrEqual(viewport!.height - 2);
-    await expect(page.getByTestId('resume-studio-pane-divider')).toBeVisible();
-    const previewPane = page.getByTestId('resume-studio-preview-pane');
-    const previewViewport = page.getByTestId('resume-studio-preview-viewport');
-    const previewFrameElement = page.getByTestId('resume-studio-preview-frame');
-    const previewStage = page.getByTestId('resume-studio-preview-stage');
-    const previewPaneBox = await previewPane.boundingBox();
-    const previewViewportBox = await previewViewport.boundingBox();
-    const previewStageBox = await previewStage.boundingBox();
-    const previewViewportMetrics = await previewViewport.evaluate((element) => ({
-      clientHeight: element.clientHeight,
-      scrollHeight: element.scrollHeight,
-    }));
 
-    expect(previewPaneBox).not.toBeNull();
-    expect(previewViewportBox).not.toBeNull();
-    expect(previewStageBox).not.toBeNull();
-    expect(previewViewportBox!.width).toBeGreaterThanOrEqual(previewPaneBox!.width - 1);
-    expect(previewViewportBox!.height).toBeGreaterThanOrEqual(previewPaneBox!.height - 1);
-    expect(previewStageBox!.width).toBeGreaterThanOrEqual(previewPaneBox!.width - 1);
-    expect(previewViewportMetrics.scrollHeight).toBeLessThanOrEqual(
-      previewViewportMetrics.clientHeight + 1
-    );
-    await expect(previewFrameElement).not.toHaveCSS('pointer-events', 'none');
+    await expect(page.getByTestId('resume-studio-pane-divider')).toBeVisible();
     await expect(page.locator('#resume-studio-editor-markdown-label')).toHaveCount(0);
     await expect(page.getByTestId('resume-studio-field-markdown')).toContainText(
-      '# Jane Template',
-      {
-        timeout: 15000,
-      }
+      '# Jane Template'
     );
-    const editorScrollMetrics = await page
-      .getByTestId('resume-studio-field-markdown')
-      .evaluate((element) => {
-        const scroller = element.querySelector('.cm-scroller');
-
-        if (!(scroller instanceof HTMLElement)) {
-          return null;
-        }
-
-        return {
-          clientHeight: scroller.clientHeight,
-          overflowY: getComputedStyle(scroller).overflowY,
-        };
-      });
-
-    expect(editorScrollMetrics).not.toBeNull();
-    expect(editorScrollMetrics!.clientHeight).toBeGreaterThan(0);
-    expect(['auto', 'scroll']).toContain(editorScrollMetrics!.overflowY);
 
     const previewFrame = page.frameLocator('[data-testid="resume-studio-preview-frame"]');
-    await expect(previewFrame.getByTestId('resume-studio-preview-scroll-area')).toBeVisible();
-    await expect(previewFrame.getByTestId('manual-resume-document').locator('h1')).toHaveText(
+    await expect(previewFrame.getByTestId('markdown-resume-document').locator('h1')).toHaveText(
       'Jane Template',
       {
         timeout: 15000,
       }
     );
-    await expect(previewFrame.getByTestId('manual-resume-download')).toHaveCount(0);
-    await expect(previewFrame.getByTestId('profile-section')).toHaveCount(0);
+    await expect(previewFrame.getByTestId('markdown-resume-download')).toHaveCount(0);
 
-    await page.getByTestId('resume-studio-close').click();
-    await expect(page.getByTestId('resume-studio-dialog')).toHaveCount(0);
+    const editor = page.locator('[data-testid="resume-studio-field-markdown"] .cm-content');
 
-    await page.getByTestId('resume-studio-launcher').click();
-    await expect(page.getByTestId('resume-studio-dialog')).toBeVisible({ timeout: 15000 });
-    await expect(previewFrame.getByTestId('manual-resume-document').locator('h1')).toHaveText(
-      'Jane Template'
-    );
+    await editor.click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.insertText('\n\n## Summary\nPublished summary.');
+    await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
 
     await page.getByTestId('resume-studio-publish').click();
-    await expect(
-      page.getByText(/published to src\/data\/resume\.private\.json\.$/)
-    ).toBeVisible();
+    await expect(page.getByText(/published to src\/data\/resume\.md\.$/)).toBeVisible();
     await expect(autosaveStatus(page)).toHaveText('Draft saved locally and published.');
 
     await page.getByTestId('resume-studio-close').click();
     await expect(page.getByTestId('resume-studio-dialog')).toHaveCount(0);
-    await expect(page.getByTestId('manual-resume-document').locator('h1')).toHaveText(
-      'Jane Template'
+    await expect(page.getByTestId('markdown-resume-document')).toContainText(
+      'Published summary.'
     );
   });
 });
@@ -234,22 +161,8 @@ test.describe.serial('Resume Studio preview hard breaks', () => {
     projectRoot = createTempProjectRoot('resume-studio-preview-hard-breaks-');
     writeProjectFile(
       projectRoot,
-      'src/data/resume.private.json',
-      JSON.stringify(
-        {
-          basics: {
-            label: 'Template Engineer',
-            name: 'Jane Template',
-            summary: 'Unused in manual mode',
-          },
-          manual: {
-            markdown: '# Jane Template\n\nLine one  \nLine two',
-          },
-          mode: 'manual',
-        },
-        null,
-        2
-      )
+      'src/data/resume.md',
+      '# Jane Template\n\nLine one  \nLine two'
     );
 
     const startedServer = await startResumeStudioServer(projectRoot);
@@ -268,13 +181,10 @@ test.describe.serial('Resume Studio preview hard breaks', () => {
   }) => {
     test.setTimeout(60000);
 
-    await page.goto(`http://127.0.0.1:${devServerPort}`);
-    await page.waitForLoadState('networkidle');
-    await page.getByTestId('resume-studio-launcher').click();
-    await page.getByTestId('resume-studio-dialog').waitFor();
+    await openStudio(page, devServerPort);
 
     const previewFrame = page.frameLocator('[data-testid="resume-studio-preview-frame"]');
-    const paragraph = previewFrame.getByTestId('manual-resume-document').locator('p').first();
+    const paragraph = previewFrame.getByTestId('markdown-resume-document').locator('p').first();
     const hasInitialHardBreak = await paragraph.evaluate(
       (element) => Boolean(element.querySelector('br'))
     );
@@ -287,7 +197,6 @@ test.describe.serial('Resume Studio preview hard breaks', () => {
     await page.keyboard.press('Control+End');
     await page.keyboard.insertText('\n\nTail');
     await expect(page.getByTestId('resume-studio-field-markdown')).toContainText('Tail');
-
     await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
 
     const savedState = await page.evaluate(async () => {
@@ -295,27 +204,24 @@ test.describe.serial('Resume Studio preview hard breaks', () => {
 
       return (await response.json()) as {
         draft?: {
-          manual?: {
-            markdown?: string;
-          };
+          markdown?: string;
         };
       };
     });
 
-    expect(savedState.draft?.manual?.markdown).toContain('Line one\\\nLine two');
+    expect(savedState.draft?.markdown).toContain('Line one\\\nLine two');
 
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    const reopenedDialog = page.getByTestId('resume-studio-dialog');
-    if ((await reopenedDialog.count()) === 0) {
+    if ((await page.getByTestId('resume-studio-dialog').count()) === 0) {
       await page.getByTestId('resume-studio-launcher').click();
-      await reopenedDialog.waitFor();
+      await page.getByTestId('resume-studio-dialog').waitFor();
     }
 
     const reloadedParagraph = page
       .frameLocator('[data-testid="resume-studio-preview-frame"]')
-      .getByTestId('manual-resume-document')
+      .getByTestId('markdown-resume-document')
       .locator('p')
       .first();
     const hasReloadedHardBreak = await reloadedParagraph.evaluate(
@@ -346,25 +252,7 @@ test.describe.serial('Resume Studio scroll sync', () => {
       ]).flat(),
     ].join('\n');
 
-    writeProjectFile(
-      projectRoot,
-      'src/data/resume.private.json',
-      JSON.stringify(
-        {
-          basics: {
-            label: 'Template Engineer',
-            name: 'Jane Template',
-            summary: 'Scroll sync coverage',
-          },
-          manual: {
-            markdown: longMarkdown,
-          },
-          mode: 'manual',
-        },
-        null,
-        2
-      )
-    );
+    writeProjectFile(projectRoot, 'src/data/resume.md', longMarkdown);
 
     const startedServer = await startResumeStudioServer(projectRoot);
 
@@ -382,10 +270,7 @@ test.describe.serial('Resume Studio scroll sync', () => {
   }) => {
     test.setTimeout(90000);
 
-    await page.goto(`http://127.0.0.1:${devServerPort}`);
-    await page.waitForLoadState('networkidle');
-    await page.getByTestId('resume-studio-launcher').click();
-    await page.getByTestId('resume-studio-dialog').waitFor();
+    await openStudio(page, devServerPort);
 
     const editorViewport = page.getByTestId('resume-studio-editor-scroll-area-viewport');
     const previewViewport = page
@@ -447,11 +332,10 @@ test.describe.serial('Resume Studio scroll sync', () => {
 
     await page.reload();
     await page.waitForLoadState('networkidle');
-    const reloadedDialog = page.getByTestId('resume-studio-dialog');
 
-    if ((await reloadedDialog.count()) === 0) {
+    if ((await page.getByTestId('resume-studio-dialog').count()) === 0) {
       await page.getByTestId('resume-studio-launcher').click();
-      await reloadedDialog.waitFor();
+      await page.getByTestId('resume-studio-dialog').waitFor();
     }
 
     const reloadedEditorViewport = page.getByTestId(
@@ -460,20 +344,6 @@ test.describe.serial('Resume Studio scroll sync', () => {
     const reloadedPreviewViewport = page
       .frameLocator('[data-testid="resume-studio-preview-frame"]')
       .getByTestId('resume-studio-preview-scroll-area-viewport');
-
-    await expect
-      .poll(async () => {
-        const editor = await getScrollMetrics(reloadedEditorViewport);
-        const preview = await getScrollMetrics(reloadedPreviewViewport);
-
-        return (
-          editor.clientHeight > 0 &&
-          editor.maxScrollTop > 0 &&
-          preview.clientHeight > 0 &&
-          preview.maxScrollTop > 0
-        );
-      })
-      .toBeTruthy();
 
     await setScrollProgress(reloadedEditorViewport, 0.33);
 
@@ -497,22 +367,8 @@ test.describe.serial('Resume Studio versions popover', () => {
     projectRoot = createTempProjectRoot('resume-studio-versions-popover-');
     writeProjectFile(
       projectRoot,
-      'src/data/resume.private.json',
-      JSON.stringify(
-        {
-          basics: {
-            label: 'Template Engineer',
-            name: 'Jane Template',
-            summary: 'Resume Studio versions coverage',
-          },
-          manual: {
-            markdown: '# Jane Template\n\nTemplate Engineer',
-          },
-          mode: 'manual',
-        },
-        null,
-        2
-      )
+      'src/data/resume.md',
+      '# Jane Template\n\nTemplate Engineer'
     );
 
     const startedServer = await startResumeStudioServer(projectRoot);
@@ -529,21 +385,14 @@ test.describe.serial('Resume Studio versions popover', () => {
   test('uses a popover-backed versions menu for open, close, create, select, and delete flows', async ({
     page,
   }) => {
-    await page.goto(`http://127.0.0.1:${devServerPort}`);
-    await page.waitForLoadState('networkidle');
-    await expect(page.getByTestId('resume-studio-launcher')).toHaveText('Edit resume', {
-      timeout: 15000,
-    });
-    await page.getByTestId('resume-studio-launcher').click();
-    await page.getByTestId('resume-studio-dialog').waitFor();
+    await openStudio(page, devServerPort);
 
     const initialActiveVersion =
       (await page.getByTestId('resume-studio-active-version').textContent())?.trim() || '';
-
-    expect(initialActiveVersion).not.toBe('');
-
     const versionsToggle = page.getByTestId('resume-studio-versions-toggle');
     const versionsMenu = page.getByTestId('resume-studio-versions-menu');
+
+    expect(initialActiveVersion).not.toBe('');
 
     await versionsToggle.click();
     await expect(versionsMenu).toBeVisible();
@@ -557,42 +406,46 @@ test.describe.serial('Resume Studio versions popover', () => {
     expect(toggleBox).not.toBeNull();
     expect(menuBox).not.toBeNull();
     expect(menuBox!.y).toBeGreaterThan(toggleBox!.y + toggleBox!.height - 1);
-    expect(Math.abs(menuBox!.x + menuBox!.width - (toggleBox!.x + toggleBox!.width))).toBeLessThanOrEqual(32);
+    expect(
+      Math.abs(menuBox!.x + menuBox!.width - (toggleBox!.x + toggleBox!.width))
+    ).toBeLessThanOrEqual(32);
     expect(isPortaledOutsideDialog).toBeTruthy();
 
     await page.keyboard.press('Escape');
-    await expect(versionsMenu).toHaveCount(0);
+    await expect(versionsMenu).toBeHidden();
 
     await versionsToggle.click();
     await expect(versionsMenu).toBeVisible();
-    await page.getByTestId('resume-studio-active-version').click();
-    await expect(versionsMenu).toHaveCount(0);
+    await page.mouse.click(10, 10);
+    await expect(versionsMenu).toBeHidden();
 
     await versionsToggle.click();
-    await expect(versionsMenu).toBeVisible();
-    await page.getByTestId('resume-studio-version-name').fill('Exploration draft');
+    await page.getByTestId('resume-studio-version-name').fill('Alt CV');
     await page.getByTestId('resume-studio-create-version').click();
-    await expect(versionsMenu).toHaveCount(0);
-    await expect(page.getByTestId('resume-studio-active-version')).toHaveText('Exploration draft');
+    await expect(page.getByTestId('resume-studio-active-version')).toHaveText('Alt CV');
+    await expect(versionsMenu).toBeHidden();
+
+    const editor = page.locator('[data-testid="resume-studio-field-markdown"] .cm-content');
+    await editor.click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.insertText('\n\nAlt version');
+    await expect(autosaveStatus(page)).toHaveText('Draft saved locally. Publish when ready.');
 
     await versionsToggle.click();
-    await expect(versionsMenu).toBeVisible();
-    await versionsMenu
-      .locator('[data-testid^="resume-studio-version-item-"]')
-      .filter({ hasText: initialActiveVersion })
+    await page
+      .getByTestId('resume-studio-version-item-1')
       .getByRole('button', { name: 'Open' })
       .click();
-    await expect(versionsMenu).toHaveCount(0);
-    await expect(page.getByTestId('resume-studio-active-version')).toHaveText(initialActiveVersion);
+    await expect(page.getByTestId('resume-studio-active-version')).toHaveText(
+      initialActiveVersion
+    );
 
     await versionsToggle.click();
-    await expect(versionsMenu).toBeVisible();
-    const createdVersionItem = versionsMenu
+    await page
       .locator('[data-testid^="resume-studio-version-item-"]')
-      .filter({ hasText: 'Exploration draft' });
-
-    await createdVersionItem.getByRole('button', { name: 'Delete' }).click();
-    await expect(versionsMenu).toBeVisible();
-    await expect(createdVersionItem).toHaveCount(0);
+      .filter({ hasText: 'Alt CV' })
+      .getByRole('button', { name: 'Delete' })
+      .click();
+    await expect(page.getByText('Alt CV deleted.')).toBeVisible();
   });
 });

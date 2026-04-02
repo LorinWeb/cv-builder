@@ -11,33 +11,17 @@ import {
 } from './support/temp-project';
 import { waitForAmbientDesignReady } from './support/resume-page';
 
-test.describe.serial('Manual PDF render target', () => {
+test.describe.serial('Markdown PDF render target', () => {
   let server: ViteDevServer | null = null;
   let devServerPort: number;
   let projectRoot: string;
 
   test.beforeAll(async () => {
-    projectRoot = createTempProjectRoot('manual-pdf-target-');
+    projectRoot = createTempProjectRoot('markdown-pdf-target-');
     writeProjectFile(
       projectRoot,
-      'src/data/resume.sample.json',
-      JSON.stringify(
-        {
-          basics: {
-            email: 'jane@example.com',
-            label: 'Staff Engineer',
-            name: 'Jane Doe',
-            phone: '+44 123456789',
-            summary: 'Unused in manual mode',
-          },
-          manual: {
-            markdown: '# Jane Doe\n\n## Summary\n\nLead platform work.\n\n## Experience\n\n- Built systems.',
-          },
-          mode: 'manual',
-        },
-        null,
-        2
-      )
+      'src/data/resume.md',
+      '# Jane Doe\n\n## Summary\n\nLead platform work.\n\n## Experience\n\n- Built systems.'
     );
 
     const config: InlineConfig = {
@@ -61,7 +45,7 @@ test.describe.serial('Manual PDF render target', () => {
     const address = server.httpServer?.address();
 
     if (!address || typeof address === 'string') {
-      throw new Error('Could not resolve the manual PDF render target server port.');
+      throw new Error('Could not resolve the markdown PDF render target server port.');
     }
 
     devServerPort = (address as AddressInfo).port;
@@ -72,7 +56,7 @@ test.describe.serial('Manual PDF render target', () => {
     destroyTempProjectRoot(projectRoot);
   });
 
-  test('renders the manual markdown document unchanged in the PDF target', async ({
+  test('renders the markdown document unchanged in the PDF target', async ({
     page,
   }) => {
     await page.emulateMedia({
@@ -87,12 +71,10 @@ test.describe.serial('Manual PDF render target', () => {
     await waitForAmbientDesignReady(page);
     await page.waitForTimeout(200);
 
-    await expect(page.getByTestId('manual-resume-document').locator('h1')).toHaveText(
+    await expect(page.getByTestId('markdown-resume-document').locator('h1')).toHaveText(
       'Jane Doe'
     );
-    await expect(page.getByTestId('manual-resume-download')).toHaveCount(0);
-    await expect(page.getByTestId('profile-section')).toHaveCount(0);
-    await expect(page.getByTestId('page-sidebar-right')).toHaveCount(0);
+    await expect(page.getByTestId('markdown-resume-download')).toHaveCount(0);
     await expect(page.getByText('Lead platform work.')).toBeVisible();
   });
 });

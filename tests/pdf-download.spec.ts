@@ -6,10 +6,7 @@ import path from 'node:path';
 import { expect, test } from '@playwright/test';
 
 import { RESUME_PDF_DOWNLOAD_HREF } from '../src/features/pdf-download/constants';
-import {
-  getProfileContactItems,
-  usePdfDownload,
-} from '../src/features/pdf-download';
+import { usePdfDownload } from '../src/features/pdf-download';
 import { gotoResume } from './support/resume-page';
 
 const PROJECT_ROOT = process.cwd();
@@ -50,57 +47,22 @@ test('returns the expected PDF download state', async () => {
   expect(usePdfDownload('pdf').isPdfRenderTarget).toBeTruthy();
 });
 
-test('selects public-only contacts for web and full contacts for PDF output', async () => {
-  const profileData = {
-    email: 'jane.private@example.com',
-    label: 'Template Engineer',
-    location: {
-      city: 'London',
-      countryCode: 'UK',
-    },
-    name: 'Jane Private',
-    phone: '+1 555-0199',
-    profiles: [
-      {
-        url: 'https://example.com/jane-private',
-      },
-    ],
-    summary: 'Template summary.',
-  };
-  expect(getProfileContactItems(profileData, 'web').map((item) => item.kind)).toEqual([
-    'location',
-    'profile',
-  ]);
-  expect(getProfileContactItems(profileData, 'pdf').map((item) => item.kind)).toEqual([
-    'email',
-    'phone',
-    'location',
-    'profile',
-  ]);
-  expect(usePdfDownload().href).toBe(RESUME_PDF_DOWNLOAD_HREF);
-});
-
-test('keeps sensitive contact links out of the public web resume while exposing the PDF download', async ({ page }) => {
+test('renders the PDF download affordance on the published resume', async ({ page }) => {
   await gotoResume(page);
 
-  await expect(page.locator('a[href^="mailto:"]')).toHaveCount(0);
-  await expect(page.locator('a[href^="tel:"]')).toHaveCount(0);
-  await expect(page.getByTestId('profile-download')).toHaveCount(1);
-  await expect(page.getByTestId('profile-download').locator('a')).toHaveAttribute(
+  await expect(page.getByTestId('markdown-resume-download')).toHaveAttribute(
     'href',
     RESUME_PDF_DOWNLOAD_HREF
   );
-  await expect(page.getByTestId('profile-contact-location').locator('svg')).toHaveCount(1);
-  await expect(page.getByTestId('profile-contact-profile-0').locator('svg')).toHaveCount(1);
 });
 
-test('builds a redacted public site and emits the generated PDF using the auto-derived path', async () => {
+test('builds the public site and emits the generated PDF using the auto-derived path', async () => {
   const outputDirectory = mkdtempSync(path.join(tmpdir(), 'resume-pdf-dist-'));
 
   try {
     execFileSync(
       getNpmCommand(),
-      ['run', 'build', '--', '--mode', 'test'],
+      ['run', 'build'],
       {
         cwd: PROJECT_ROOT,
         env: {
@@ -121,10 +83,8 @@ test('builds a redacted public site and emits the generated PDF using the auto-d
     const bundledText = collectTextFiles(outputDirectory).join('\n');
 
     expect(existsSync(generatedPdfPath)).toBeTruthy();
-    expect(publicHtml).not.toContain('mailto:');
-    expect(publicHtml).not.toContain('tel:');
-    expect(bundledText).not.toContain('john.doe@example.com');
-    expect(bundledText).not.toContain('+1 555-0100');
+    expect(publicHtml).toContain('<div id="root"></div>');
+    expect(bundledText).toContain('Lorin Kalemi');
     expect(bundledText).toContain(RESUME_PDF_DOWNLOAD_HREF);
   } finally {
     rmSync(outputDirectory, { force: true, recursive: true });

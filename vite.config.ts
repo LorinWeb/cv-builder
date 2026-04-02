@@ -9,10 +9,7 @@ import {
   getResumeDataWatchPaths,
   loadResumeData,
 } from './src/data/load-resume-data';
-import {
-  getResumeRenderTarget,
-  redactResumeData,
-} from './src/features/pdf-download/build';
+import { getResumeRenderTarget } from './src/features/pdf-download/build';
 import { resumePdfPlugin } from './src/features/pdf-download/build/vite-plugin';
 import type { PdfRenderTarget } from './src/features/pdf-download/types';
 import { RESUME_STUDIO_WATCH_IGNORED_PATTERNS } from './src/features/resume-studio/constants';
@@ -52,12 +49,9 @@ function resumeDataPlugin(
   const watchedResumeDataPaths = getResumeDataWatchPaths({
     projectRoot,
   });
-  const getResumeSourceData = () => loadResumeData({ mode, projectRoot });
-  const getPublicResumeData = () => redactResumeData(getResumeSourceData());
+  const getResumeSourceData = () => loadResumeData({ projectRoot });
   const getSerializedResumeData = () =>
-    renderTarget === 'pdf'
-      ? getResumeSourceData()
-      : getPublicResumeData();
+    renderTarget === 'pdf' ? getResumeSourceData() : getResumeSourceData();
 
   return {
     name: 'resume-data',
@@ -98,7 +92,7 @@ function resumeDataPlugin(
       return modules;
     },
     transformIndexHtml(html) {
-      const resumeData = getPublicResumeData();
+      const resumeData = getResumeSourceData();
       const description = getMetaDescription(resumeData);
       const title = getDocumentTitle(resumeData);
 

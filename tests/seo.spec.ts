@@ -3,9 +3,7 @@ import { expect, test } from '@playwright/test';
 import { loadResumeData } from '../src/data/load-resume-data';
 import { getDocumentTitle, getMetaDescription } from '../src/helpers/seo';
 
-const resumeData = loadResumeData({
-  mode: 'test',
-});
+const resumeData = loadResumeData();
 
 test('exposes the build-time document title', async ({ page }) => {
   await page.goto('/');

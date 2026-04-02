@@ -1,1 +1,1 @@
-export { getProfileContactItems, usePdfDownload } from './runtime';
+export { usePdfDownload } from './runtime';

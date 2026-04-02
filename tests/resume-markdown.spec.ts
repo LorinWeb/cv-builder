@@ -12,64 +12,27 @@ test('strips markdown syntax while preserving visible text', async () => {
   ).toBe('Lead platform work with docs. Shipped tooling');
 });
 
-test('builds meta descriptions from markdown summaries', async () => {
-  expect(
-    getMetaDescription({
-      basics: {
-        label: 'Staff Engineer',
-        name: 'Jane Doe',
-        summary:
-          'Lead **platform** work.\n\nBuilt [design systems](https://example.com) for product teams.',
-      },
-    })
-  ).toBe('Lead platform work.');
-});
-
-test('derives the manual resume title from the first level-one heading', async () => {
+test('derives the document title from the first level-one heading', async () => {
   expect(
     getDocumentTitle({
-      basics: {
-        label: 'Staff Engineer',
-        name: 'Jane Doe',
-        summary: 'Unused for manual mode',
-      },
-      manual: {
-        markdown: '# Jane Doe\n\n**Staff Engineer**\n\n## Summary\n\nLead platform work.',
-      },
-      mode: 'manual',
+      markdown: '# Jane Doe\n\n**Staff Engineer**\n\n## Summary\n\nLead platform work.',
     })
   ).toBe('Jane Doe CV');
 });
 
-test('falls back to a generic title when manual markdown has no level-one heading', async () => {
+test('falls back to a generic title when markdown has no level-one heading', async () => {
   expect(
     getDocumentTitle({
-      basics: {
-        label: 'Staff Engineer',
-        name: 'Jane Doe',
-        summary: 'Unused for manual mode',
-      },
-      manual: {
-        markdown: 'No heading here',
-      },
-      mode: 'manual',
+      markdown: 'No heading here',
     })
   ).toBe('Resume');
 });
 
-test('builds meta descriptions from the first non-heading manual markdown block', async () => {
+test('builds meta descriptions from the first non-heading markdown block', async () => {
   expect(
     getMetaDescription({
-      basics: {
-        label: 'Staff Engineer',
-        name: 'Jane Doe',
-        summary: 'Unused for manual mode',
-      },
-      manual: {
-        markdown:
-          '# Jane Doe\n**Staff Engineer**\nLondon, UK\n\n## Summary\n\nLead **platform** work. Built [systems](https://example.com).',
-      },
-      mode: 'manual',
+      markdown:
+        '# Jane Doe\n**Staff Engineer**\nLondon, UK\n\n## Summary\n\nLead **platform** work. Built [systems](https://example.com).',
     })
   ).toBe('Lead platform work.');
 });

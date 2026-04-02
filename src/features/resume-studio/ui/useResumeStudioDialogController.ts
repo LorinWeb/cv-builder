@@ -15,21 +15,8 @@ import {
   saveResumeStudioDraft,
   selectResumeStudioVersion,
 } from '../runtime';
-import { RESUME_STUDIO_AUTOSAVE_DELAY_MS } from '../constants';
+import { RESUME_STUDIO_AUTOSAVE_DELAY_MS, RESUME_STUDIO_MARKDOWN_PATH } from '../constants';
 import type { ResumeStudioDraft, ResumeStudioState } from '../types';
-
-interface UseResumeStudioDialogControllerProps {
-  onOpenChange: (open: boolean) => void;
-  onStateChange: (state: ResumeStudioState) => void;
-  open: boolean;
-  state: ResumeStudioState;
-}
-
-function getPersistedManualMarkdown(state: ResumeStudioState['draft']) {
-  return state?.mode === 'manual'
-    ? normalizeResumeStudioMarkdown(state.manual?.markdown || '')
-    : '';
-}
 
 function getAutosaveStatusLabel({
   errorMessage,
@@ -65,25 +52,23 @@ function getAutosaveStatusLabel({
   return 'Editing a saved version. Publish when ready.';
 }
 
-function toFieldName(fieldName: string) {
-  return fieldName === 'manual.markdown' ? 'markdown' : null;
-}
-
 export function useResumeStudioDialogController({
   onOpenChange,
   onStateChange,
   open,
   state,
-}: UseResumeStudioDialogControllerProps) {
+}: {
+  onOpenChange: (open: boolean) => void;
+  onStateChange: (state: ResumeStudioState) => void;
+  open: boolean;
+  state: ResumeStudioState;
+}) {
   const initialDraft = state.draft ? toResumeStudioDraft(state.draft) : { markdown: '' };
   const form = useForm<ResumeStudioDraft>({
     defaultValues: initialDraft,
   });
   const [markdown, setMarkdown] = useState(initialDraft.markdown);
-  const [sourceDraft, setSourceDraft] = useState(state.draft);
-  const [persistedMarkdown, setPersistedMarkdown] = useState(
-    getPersistedManualMarkdown(state.draft)
-  );
+  const [persistedMarkdown, setPersistedMarkdown] = useState(initialDraft.markdown);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [createVersionName, setCreateVersionName] = useState('');
@@ -114,8 +99,7 @@ export function useResumeStudioDialogController({
     !isSaving &&
     !isPublishing &&
     (!state.isActiveVersionPublished || state.hasUnpublishedChanges);
-  const previewData =
-    sourceDraft ? applyResumeStudioDraft(sourceDraft, { markdown }) : null;
+  const previewData = applyResumeStudioDraft({ markdown });
   const publishButtonLabel =
     isPublishing
       ? 'Publishing...'
@@ -132,8 +116,7 @@ export function useResumeStudioDialogController({
       const nextDraft = toResumeStudioDraft(nextState.draft);
 
       loadedVersionIdRef.current = nextState.activeVersionId;
-      setSourceDraft(nextState.draft);
-      setPersistedMarkdown(getPersistedManualMarkdown(nextState.draft));
+      setPersistedMarkdown(nextDraft.markdown);
       setMarkdown(nextDraft.markdown);
       form.clearErrors();
 
@@ -146,14 +129,12 @@ export function useResumeStudioDialogController({
   );
 
   const saveDraftValues = useEffectEvent(async (markdownToSave: string) => {
-    if (!sourceDraft) {
-      return null;
-    }
+    const normalizedMarkdown = normalizeResumeStudioMarkdown(markdownToSave);
 
     if (savePromiseRef.current) {
       await savePromiseRef.current;
 
-      if (markdownToSave === persistedMarkdown) {
+      if (normalizedMarkdown === persistedMarkdown) {
         return state;
       }
     }
@@ -164,8 +145,8 @@ export function useResumeStudioDialogController({
     const savePromise = (async () => {
       try {
         const nextState = await saveResumeStudioDraft({
-          draft: applyResumeStudioDraft(sourceDraft, {
-            markdown: markdownToSave,
+          draft: applyResumeStudioDraft({
+            markdown: normalizedMarkdown,
           }),
         });
 
@@ -174,13 +155,11 @@ export function useResumeStudioDialogController({
       } catch (error) {
         if (error instanceof ResumeStudioApiError && error.fieldErrors) {
           for (const [fieldName, message] of Object.entries(error.fieldErrors)) {
-            const nextFieldName = toFieldName(fieldName);
-
-            if (!nextFieldName) {
+            if (fieldName !== 'markdown') {
               continue;
             }
 
-            form.setError(nextFieldName, {
+            form.setError(fieldName, {
               message,
               type: 'server',
             });
@@ -212,7 +191,7 @@ export function useResumeStudioDialogController({
       await savePromiseRef.current;
     }
 
-    if (!sourceDraft || markdown === persistedMarkdown) {
+    if (markdown === persistedMarkdown) {
       return state;
     }
 
@@ -243,7 +222,6 @@ export function useResumeStudioDialogController({
   useEffect(() => {
     if (
       !open ||
-      !sourceDraft ||
       isSaving ||
       isPublishing ||
       isCreatingVersion ||
@@ -271,7 +249,6 @@ export function useResumeStudioDialogController({
     open,
     persistedMarkdown,
     saveDraftValues,
-    sourceDraft,
   ]);
 
   async function handleCreateVersion() {
@@ -373,7 +350,7 @@ export function useResumeStudioDialogController({
       syncLoadedState(nextState, { resetForm: false });
       publishResumeStudioPreview(nextState.draft!);
       setStatusMessage(
-        `${nextState.activeVersionName || 'Current version'} published to src/data/resume.private.json.`
+        `${nextState.activeVersionName || 'Current version'} published to ${RESUME_STUDIO_MARKDOWN_PATH}.`
       );
     } catch (error) {
       setErrorMessage(
