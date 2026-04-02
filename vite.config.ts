@@ -14,6 +14,7 @@ import {
   redactResumeData,
 } from './src/features/pdf-download/build';
 import { resumePdfPlugin } from './src/features/pdf-download/build/vite-plugin';
+import type { PdfRenderTarget } from './src/features/pdf-download/types';
 import { RESUME_STUDIO_WATCH_IGNORED_PATTERNS } from './src/features/resume-studio/constants';
 import { resumeStudioPlugin } from './src/features/resume-studio/server/vite-plugin';
 import { getDocumentTitle, getMetaDescription } from './src/helpers/seo';
@@ -38,18 +39,23 @@ interface AppViteConfigOptions {
   command: 'build' | 'serve';
   dataProjectRoot?: string;
   enableResumePdf?: boolean;
+  renderTarget?: PdfRenderTarget;
   enableResumeStudio?: boolean;
   mode: string;
 }
 
-function resumeDataPlugin(mode: string, projectRoot: string): PluginOption {
+function resumeDataPlugin(
+  mode: string,
+  projectRoot: string,
+  renderTarget: PdfRenderTarget
+): PluginOption {
   const watchedResumeDataPaths = getResumeDataWatchPaths({
     projectRoot,
   });
   const getResumeSourceData = () => loadResumeData({ mode, projectRoot });
   const getPublicResumeData = () => redactResumeData(getResumeSourceData());
   const getSerializedResumeData = () =>
-    getResumeRenderTarget() === 'pdf'
+    renderTarget === 'pdf'
       ? getResumeSourceData()
       : getPublicResumeData();
 
@@ -134,12 +140,13 @@ export function createAppViteConfig({
   command,
   dataProjectRoot,
   enableResumePdf,
+  renderTarget: renderTargetOverride,
   enableResumeStudio,
   mode,
 }: AppViteConfigOptions): UserConfig {
   const appRoot = fileURLToPath(new URL('.', import.meta.url));
   const resolvedDataProjectRoot = path.resolve(appRoot, dataProjectRoot || '.');
-  const renderTarget = getResumeRenderTarget();
+  const renderTarget = renderTargetOverride ?? getResumeRenderTarget();
   const shouldEnableResumePdf = enableResumePdf ?? renderTarget === 'web';
   const shouldEnableResumeStudio =
     enableResumeStudio ?? (command === 'serve' && mode !== 'test');
@@ -148,7 +155,7 @@ export function createAppViteConfig({
     plugins: [
       react(),
       tailwindcss(),
-      resumeDataPlugin(mode, resolvedDataProjectRoot),
+      resumeDataPlugin(mode, resolvedDataProjectRoot, renderTarget),
       shouldEnableResumePdf ? resumePdfPlugin(resolvedDataProjectRoot) : null,
       shouldEnableResumeStudio ? resumeStudioPlugin(resolvedDataProjectRoot) : null,
     ],

@@ -1,18 +1,22 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect, useRef, type ReactNode, type RefObject } from 'react';
 
-import Page from './Layout/Page';
 import { AmbientDesignLayer } from './AmbientDesignLayer';
-import EducationEntryItem from './ItemRenderers/EducationEntryItem';
-import AchievementItem from './ItemRenderers/AchievementItem';
-import SkillCategoryItem from './ItemRenderers/SkillCategoryItem';
-import WorkExperienceItem from './ItemRenderers/WorkExperienceItem';
-import ProfileSection from './ProfileSection';
-import ResumeSection from './ResumeSection';
-import { joinClassNames } from '../helpers/classNames';
-import { ResumeMarkdown } from '../helpers/resume-markdown';
-import useElementVisibility from '../hooks/useElementVisibility';
-import useMediaQuery from '../hooks/useMediaQuery';
-import type { ResumeRuntimeData, ResumeWorkItem } from '../data/types/resume';
+import { ManualResume } from './ManualResume';
+import { StructuredResume } from './StructuredResume';
+import type { ResumeRuntimeData } from '../data/types/resume';
+import { getResumeMode } from '../helpers/manual-resume';
+import {
+  createResumeStudioScrollSyncReadyMessage,
+  createResumeStudioScrollSyncUpdateMessage,
+  getResumeStudioScrollProgress,
+  getResumeStudioScrollTopForProgress,
+  isResumeStudioScrollSyncSetMessage,
+  setResumeStudioScrollProgress,
+} from '../features/resume-studio/runtime';
+import { StudioScrollArea } from '../features/resume-studio/ui/StudioScrollArea';
+
+const SCROLL_SYNC_PROGRESS_EPSILON = 0.002;
+const SCROLL_SYNC_SCROLL_TOP_EPSILON = 1;
 
 interface AppProps {
   data: ResumeRuntimeData;
@@ -55,143 +59,170 @@ function ResumeStudioLauncherSlot() {
   );
 }
 
-function App({ data, isResumeStudioPreview = false }: AppProps) {
-  const profileData = data.basics;
-  const profilePhoto = profileData.photo;
-  const workData = data.work || [];
-  const skillsData = data.skills || [];
-  const educationData = data.education || [];
-  const impactData = profileData.impact || [];
-  const summary = profileData.summary;
-  const isBelowSmallViewport = useMediaQuery('(max-width: 640px)');
-  const { isVisible: isStandalonePhotoVisible, ref: standalonePhotoRef } =
-    useElementVisibility<HTMLImageElement>();
-  const shouldRenderSummaryAsFirstSection =
-    !!summary &&
-    (profileData.summaryAlwaysFirstSection || isBelowSmallViewport);
-  const shouldRenderSummaryInSidebar =
-    !!summary && !shouldRenderSummaryAsFirstSection;
-  const hasSideColumn =
-    shouldRenderSummaryInSidebar || skillsData.length > 0 || educationData.length > 0;
+function useResumeStudioPreviewScrollSync(
+  viewportRef: RefObject<HTMLDivElement | null>
+) {
+  const lastProgressRef = useRef(0);
+  const clearSuppressionFrameRef = useRef<number | null>(null);
+  const scrollFrameRef = useRef<number | null>(null);
+  const resizeFrameRef = useRef<number | null>(null);
+  const suppressedScrollEventsRef = useRef(0);
 
-  function renderSummarySection() {
-    if (!summary) {
-      return null;
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.parent === window) {
+      return;
     }
 
-    return (
-      <ResumeSection title="Summary">
-        <ResumeMarkdown markdown={summary} mode="block" />
-      </ResumeSection>
-    );
+    const viewport = viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    const scheduleSuppressionReset = () => {
+      if (clearSuppressionFrameRef.current !== null) {
+        cancelAnimationFrame(clearSuppressionFrameRef.current);
+      }
+
+      clearSuppressionFrameRef.current = requestAnimationFrame(() => {
+        suppressedScrollEventsRef.current = 0;
+        clearSuppressionFrameRef.current = null;
+      });
+    };
+
+    const applyProgress = (progress: number) => {
+      const nextScrollTop = getResumeStudioScrollTopForProgress(viewport, progress);
+
+      lastProgressRef.current = progress;
+
+      if (Math.abs(viewport.scrollTop - nextScrollTop) <= SCROLL_SYNC_SCROLL_TOP_EPSILON) {
+        return;
+      }
+
+      suppressedScrollEventsRef.current = 1;
+      setResumeStudioScrollProgress(viewport, progress);
+      scheduleSuppressionReset();
+    };
+
+    const postToParent = (message: unknown) => {
+      window.parent.postMessage(message, window.location.origin);
+    };
+
+    const handleScroll = () => {
+      if (suppressedScrollEventsRef.current > 0) {
+        suppressedScrollEventsRef.current -= 1;
+        return;
+      }
+
+      if (scrollFrameRef.current !== null) {
+        cancelAnimationFrame(scrollFrameRef.current);
+      }
+
+      scrollFrameRef.current = requestAnimationFrame(() => {
+        scrollFrameRef.current = null;
+        const nextProgress = getResumeStudioScrollProgress(viewport);
+
+        if (Math.abs(lastProgressRef.current - nextProgress) <= SCROLL_SYNC_PROGRESS_EPSILON) {
+          return;
+        }
+
+        lastProgressRef.current = nextProgress;
+        postToParent(createResumeStudioScrollSyncUpdateMessage(nextProgress));
+      });
+    };
+
+    const handleMessage = (event: MessageEvent) => {
+      if (
+        event.origin !== window.location.origin ||
+        event.source !== window.parent ||
+        !isResumeStudioScrollSyncSetMessage(event.data)
+      ) {
+        return;
+      }
+
+      applyProgress(event.data.progress);
+    };
+
+    const scheduleReapply = () => {
+      if (resizeFrameRef.current !== null) {
+        cancelAnimationFrame(resizeFrameRef.current);
+      }
+
+      resizeFrameRef.current = requestAnimationFrame(() => {
+        resizeFrameRef.current = null;
+        applyProgress(lastProgressRef.current);
+      });
+    };
+
+    const resizeObserver = new ResizeObserver(scheduleReapply);
+    const content = viewport.firstElementChild;
+
+    resizeObserver.observe(viewport);
+
+    if (content instanceof HTMLElement) {
+      resizeObserver.observe(content);
+    }
+
+    viewport.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('message', handleMessage);
+    postToParent(createResumeStudioScrollSyncReadyMessage());
+
+    return () => {
+      if (clearSuppressionFrameRef.current !== null) {
+        cancelAnimationFrame(clearSuppressionFrameRef.current);
+      }
+
+      if (scrollFrameRef.current !== null) {
+        cancelAnimationFrame(scrollFrameRef.current);
+      }
+
+      if (resizeFrameRef.current !== null) {
+        cancelAnimationFrame(resizeFrameRef.current);
+      }
+
+      resizeObserver.disconnect();
+      viewport.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('message', handleMessage);
+    };
+  }, [viewportRef]);
+}
+
+function ResumeStudioPreviewScrollArea({ children }: { children: ReactNode }) {
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+
+  useResumeStudioPreviewScrollSync(viewportRef);
+
+  return (
+    <StudioScrollArea
+      contentClassName="min-h-full"
+      rootClassName="h-screen w-screen"
+      rootTestId="resume-studio-preview-scroll-area"
+      viewportClassName="h-screen w-screen overscroll-contain"
+      viewportRef={viewportRef}
+      viewportTestId="resume-studio-preview-scroll-area-viewport"
+    >
+      {children}
+    </StudioScrollArea>
+  );
+}
+
+function App({ data, isResumeStudioPreview = false }: AppProps) {
+  const isManualResume = getResumeMode(data) === 'manual';
+  const resumeContent = isManualResume ? (
+    <ManualResume data={data} isResumeStudioPreview={isResumeStudioPreview} />
+  ) : (
+    <StructuredResume data={data} />
+  );
+
+  if (isResumeStudioPreview) {
+    return <ResumeStudioPreviewScrollArea>{resumeContent}</ResumeStudioPreviewScrollArea>;
   }
 
   return (
     <>
-      {!isResumeStudioPreview ? <AmbientDesignLayer /> : null}
-      {!isResumeStudioPreview ? <ResumeStudioLauncherSlot /> : null}
-
-      {profilePhoto ? (
-        <div
-          data-testid="profile-photo-standalone-frame"
-          className="relative z-10 mx-auto my-12.5 flex w-[210mm] max-w-[calc(100%-32px)] justify-center px-[10mm] print:hidden"
-        >
-          <img
-            ref={standalonePhotoRef}
-            data-testid="profile-photo-standalone"
-            data-visible={String(isStandalonePhotoVisible)}
-            src={profilePhoto.src}
-            alt={profilePhoto.alt ?? `${profileData.name} profile photo`}
-            className={joinClassNames(
-              'block h-44 w-44 rounded-full border border-(--color-border-photo) object-cover object-center shadow-[0_16px_32px_-24px_rgba(34,34,34,0.5)] transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
-              isStandalonePhotoVisible
-                ? 'scale-100 opacity-100 blur-0'
-                : 'scale-95 opacity-0 blur-[2px]'
-            )}
-          />
-        </div>
-      ) : null}
-
-      <Page data-testid="app">
-        <Page.Header sticky>
-          <ProfileSection profileData={profileData} />
-        </Page.Header>
-
-        <Page.Body>
-          <Page.MainContent>
-            {shouldRenderSummaryAsFirstSection ? renderSummarySection() : null}
-            {impactData.length > 0 && (
-              <ResumeSection items={impactData} title="Selected Achievements">
-                {({ getItemClassName, items }) => (
-                  <ul className="mt-2 list-square pl-5 text-[1em] font-light">
-                    {items.map((item, index) => (
-                      <AchievementItem
-                        key={index}
-                        item={item}
-                        className={getItemClassName(item, index)}
-                      />
-                    ))}
-                  </ul>
-                )}
-              </ResumeSection>
-            )}
-
-            {workData.length > 0 && (
-              <ResumeSection<ResumeWorkItem> items={workData} title="Professional Experience">
-                {({ getItemClassName, items }) => (
-                  <>
-                    {items.map((item, index) => (
-                      <WorkExperienceItem
-                        key={index}
-                        item={item}
-                        className={getItemClassName(item, index)}
-                      />
-                    ))}
-                  </>
-                )}
-              </ResumeSection>
-            )}
-          </Page.MainContent>
-
-          {hasSideColumn && (
-            <Page.Sidebar placement="right">
-              {shouldRenderSummaryInSidebar ? renderSummarySection() : null}
-
-              {skillsData.length > 0 && (
-                <ResumeSection className="text-left" items={skillsData} title="Skills">
-                  {({ getItemClassName, items }) => (
-                    <>
-                      {items.map((item, index) => (
-                        <SkillCategoryItem
-                          key={`${item.name}-${index}`}
-                          item={item}
-                          className={getItemClassName(item, index)}
-                        />
-                      ))}
-                    </>
-                  )}
-                </ResumeSection>
-              )}
-
-              {educationData.length > 0 && (
-                <ResumeSection items={educationData} title="Education">
-                  {({ getItemClassName, items }) => (
-                    <>
-                      {items.map((item, index) => (
-                        <EducationEntryItem
-                          key={`${item.institution}-${item.startDate}-${index}`}
-                          item={item}
-                          className={getItemClassName(item, index)}
-                        />
-                      ))}
-                    </>
-                  )}
-                </ResumeSection>
-              )}
-            </Page.Sidebar>
-          )}
-        </Page.Body>
-      </Page>
+      <ResumeStudioLauncherSlot />
+      {!isManualResume ? <AmbientDesignLayer /> : null}
+      {resumeContent}
     </>
   );
 }

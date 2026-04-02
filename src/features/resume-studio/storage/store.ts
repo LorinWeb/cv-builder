@@ -12,10 +12,6 @@ import {
 } from './json-sync';
 import { SqliteResumeStudioStore } from './sqlite-store';
 
-function getResumeStudioWarnings(_data: ResumeSourceData): ResumeStudioState['warnings'] {
-  return [];
-}
-
 function createResumeStudioStarterData(): ResumeSourceData {
   return {
     basics: {
@@ -25,6 +21,7 @@ function createResumeStudioStarterData(): ResumeSourceData {
         'Write a concise summary that explains your strengths, your focus area, and the kind of work you want next.',
     },
     education: [],
+    mode: 'structured',
     skills: [],
     work: [],
   };
@@ -72,10 +69,6 @@ export function createResumeStudioStore(
     storage = null;
   }
 
-  function getStateSource(): 'private' | 'sample' {
-    return readResumeStudioPrivateData(projectRoot) ? 'private' : 'sample';
-  }
-
   function setActiveVersion(id: number | null) {
     getStorage().setActiveVersion(id);
   }
@@ -113,7 +106,7 @@ export function createResumeStudioStore(
     return activeVersion;
   }
 
-  function getDraftState(source: 'private' | 'sample'): ResumeStudioState {
+  function getDraftState(): ResumeStudioState {
     const activeVersion = getStorage().getActiveVersion();
     const publishedState = getStorage().getPublishedState();
 
@@ -121,23 +114,17 @@ export function createResumeStudioStore(
       return {
         activeVersionId: null,
         activeVersionName: null,
-        canEdit: true,
         draft: null,
         draftUpdatedAt: null,
         hasUnpublishedChanges: false,
         isActiveVersionPublished: false,
         isInitialized: false,
-        isWizardCompatible: true,
         publishedDraft: publishedState?.data || null,
         publishedVersionId: publishedState?.id || null,
-        publishedVersionName: publishedState?.name || null,
-        source,
         versions: getStorage().listVersions(),
-        warnings: [],
       };
     }
 
-    const warnings = getResumeStudioWarnings(activeVersion.data);
     const hasUnpublishedChanges = Boolean(
       publishedState && !areResumeDataEqual(activeVersion.data, publishedState.data)
     );
@@ -148,19 +135,14 @@ export function createResumeStudioStore(
     return {
       activeVersionId: activeVersion.id,
       activeVersionName: activeVersion.name,
-      canEdit: true,
       draft: activeVersion.data,
       draftUpdatedAt: activeVersion.updatedAt,
       hasUnpublishedChanges,
       isActiveVersionPublished,
       isInitialized: true,
-      isWizardCompatible: warnings.length === 0,
       publishedDraft: publishedState?.data || null,
       publishedVersionId: publishedState?.id || null,
-      publishedVersionName: publishedState?.name || null,
-      source,
       versions: getStorage().listVersions(),
-      warnings,
     };
   }
 
@@ -237,7 +219,7 @@ export function createResumeStudioStore(
   function getState() {
     maybeImportExistingPrivateResume();
 
-    return getDraftState(getStateSource());
+    return getDraftState();
   }
 
   function initializeDraft() {

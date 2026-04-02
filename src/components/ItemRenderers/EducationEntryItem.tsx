@@ -1,4 +1,4 @@
-import { formatDateRangeWithDuration } from '../../helpers/date-range';
+import { formatDateRange, formatDateRangeWithDuration } from '../../helpers/date-range';
 import { ResumeMarkdown } from '../../helpers/resume-markdown';
 import { getTextValueSource } from '../../helpers/text-value';
 import type { EducationItem } from '../../data/types/resume';
@@ -6,10 +6,18 @@ import type { EducationItem } from '../../data/types/resume';
 interface EducationEntryItemProps {
   className?: string;
   item: EducationItem;
+  showDuration?: boolean;
 }
 
-function EducationEntryItem({ className, item }: EducationEntryItemProps) {
+function EducationEntryItem({
+  className,
+  item,
+  showDuration = true,
+}: EducationEntryItemProps) {
   const courses = item.courses || [];
+  const dateRange = showDuration
+    ? formatDateRangeWithDuration(item.startDate, item.endDate)
+    : formatDateRange(item.startDate, item.endDate);
 
   return (
     <div
@@ -19,8 +27,8 @@ function EducationEntryItem({ className, item }: EducationEntryItemProps) {
       <h3 className="mb-0 block font-light text-(--color-section-subtitle)">
         {item.studyType} {item.area}
       </h3>
-      <p className="my-[0.5em] mt-0 block text-[0.85em]">
-        {formatDateRangeWithDuration(item.startDate, item.endDate)}
+      <p data-testid="education-entry-date" className="my-[0.5em] mt-0 block text-[0.85em]">
+        {dateRange}
       </p>
       <h4 className="mt-0 font-medium text-(--color-company-role)">
         {item.institution}

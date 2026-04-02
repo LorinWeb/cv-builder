@@ -89,6 +89,32 @@ test('prefers the private resume when it exists', async () => {
   });
 });
 
+test('loads manual-mode resume data and preserves the markdown payload', async () => {
+  withTempProjectRoot((projectRoot) => {
+    writeFile(
+      resolveProjectPath(projectRoot, SAMPLE_RESUME_DATA_PATH),
+      JSON.stringify(
+        {
+          basics: {
+            ...MINIMAL_RESUME_DATA.basics,
+          },
+          manual: {
+            markdown: '# Jane Doe\n\nManual summary paragraph.',
+          },
+          mode: 'manual',
+        },
+        null,
+        2
+      )
+    );
+
+    const resumeData = loadResumeData({ mode: 'development', projectRoot });
+
+    expect(resumeData.mode).toBe('manual');
+    expect(resumeData.manual?.markdown).toContain('Manual summary paragraph.');
+  });
+});
+
 test('uses the sample resume in test mode even when a private file exists', async () => {
   withTempProjectRoot((projectRoot) => {
     writeFile(
@@ -169,6 +195,34 @@ test('redacts private contact details from the public resume payload', async () 
   });
 });
 
+test('keeps manual-mode contact details in the published payload', async () => {
+  withTempProjectRoot((projectRoot) => {
+    writeFile(
+      resolveProjectPath(projectRoot, SAMPLE_RESUME_DATA_PATH),
+      JSON.stringify(
+        {
+          basics: {
+            ...MINIMAL_RESUME_DATA.basics,
+          },
+          manual: {
+            markdown: '# Jane Doe\n\njane@example.com',
+          },
+          mode: 'manual',
+        },
+        null,
+        2
+      )
+    );
+
+    const resumeData = loadResumeData({ mode: 'development', projectRoot });
+    const publicResumeData = redactResumeData(resumeData);
+
+    expect(publicResumeData.mode).toBe('manual');
+    expect('email' in publicResumeData.basics).toBeTruthy();
+    expect('phone' in publicResumeData.basics).toBeTruthy();
+  });
+});
+
 test('throws a clear error when the sample resume file is missing', async () => {
   withTempProjectRoot((projectRoot) => {
     expect(() =>
@@ -235,5 +289,27 @@ test('throws a clear error when the configured JSON fails schema validation', as
     expect(() =>
       loadResumeData({ mode: 'development', projectRoot })
     ).toThrow(/failed validation/);
+  });
+});
+
+test('throws a clear error when manual mode markdown is missing', async () => {
+  withTempProjectRoot((projectRoot) => {
+    writeFile(
+      resolveProjectPath(projectRoot, SAMPLE_RESUME_DATA_PATH),
+      JSON.stringify(
+        {
+          basics: {
+            ...MINIMAL_RESUME_DATA.basics,
+          },
+          mode: 'manual',
+        },
+        null,
+        2
+      )
+    );
+
+    expect(() =>
+      loadResumeData({ mode: 'development', projectRoot })
+    ).toThrow(/manual\.markdown: Manual resume markdown is required when mode is manual\./);
   });
 });

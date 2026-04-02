@@ -1,7 +1,11 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
-import { useForm, type Path } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 
-import { applyResumeStudioDraft, toResumeStudioDraft } from '../draft';
+import {
+  applyResumeStudioDraft,
+  normalizeResumeStudioMarkdown,
+  toResumeStudioDraft,
+} from '../draft';
 import {
   createResumeStudioVersion,
   deleteResumeStudioVersion,
@@ -10,16 +14,9 @@ import {
   ResumeStudioApiError,
   saveResumeStudioDraft,
   selectResumeStudioVersion,
-  uploadResumeStudioPhoto,
 } from '../runtime';
-import type { ResumeStudioDraft, ResumeStudioState, ResumeStudioStepId } from '../types';
-import {
-  mergeResumeStudioDraft,
-  serializeResumeStudioDraft,
-  useResumeStudioDraftSync,
-} from './useResumeStudioDraftSync';
-
-type ResumeStudioDialogTab = 'edit' | 'versions';
+import { RESUME_STUDIO_AUTOSAVE_DELAY_MS } from '../constants';
+import type { ResumeStudioDraft, ResumeStudioState } from '../types';
 
 interface UseResumeStudioDialogControllerProps {
   onOpenChange: (open: boolean) => void;
@@ -28,39 +25,10 @@ interface UseResumeStudioDialogControllerProps {
   state: ResumeStudioState;
 }
 
-function readFileAsBase64(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onerror = () => {
-      reject(reader.error || new Error('Could not read the selected file.'));
-    };
-
-    reader.onload = () => {
-      const result = reader.result;
-
-      if (typeof result !== 'string') {
-        reject(new Error('Could not encode the selected file.'));
-        return;
-      }
-
-      const [, base64 = ''] = result.split(',', 2);
-
-      resolve(base64);
-    };
-
-    reader.readAsDataURL(file);
-  });
-}
-
-function readSessionStep() {
-  if (typeof window === 'undefined') {
-    return 'basics' as ResumeStudioStepId;
-  }
-
-  const storedValue = window.sessionStorage.getItem('resume-studio-step');
-
-  return (storedValue as ResumeStudioStepId) || 'basics';
+function getPersistedManualMarkdown(state: ResumeStudioState['draft']) {
+  return state?.mode === 'manual'
+    ? normalizeResumeStudioMarkdown(state.manual?.markdown || '')
+    : '';
 }
 
 function getAutosaveStatusLabel({
@@ -79,11 +47,11 @@ function getAutosaveStatusLabel({
   }
 
   if (isSaving) {
-    return 'Saving draft locally…';
+    return 'Saving draft locally...';
   }
 
   if (hasUnsavedChanges) {
-    return 'Local changes pending…';
+    return 'Local changes pending...';
   }
 
   if (state.hasUnpublishedChanges) {
@@ -97,17 +65,25 @@ function getAutosaveStatusLabel({
   return 'Editing a saved version. Publish when ready.';
 }
 
+function toFieldName(fieldName: string) {
+  return fieldName === 'manual.markdown' ? 'markdown' : null;
+}
+
 export function useResumeStudioDialogController({
   onOpenChange,
   onStateChange,
   open,
   state,
 }: UseResumeStudioDialogControllerProps) {
+  const initialDraft = state.draft ? toResumeStudioDraft(state.draft) : { markdown: '' };
   const form = useForm<ResumeStudioDraft>({
-    defaultValues: state.draft ? toResumeStudioDraft(state.draft) : undefined,
+    defaultValues: initialDraft,
   });
-  const [activeTab, setActiveTab] = useState<ResumeStudioDialogTab>('edit');
-  const [currentStep, setCurrentStep] = useState<ResumeStudioStepId>(readSessionStep);
+  const [markdown, setMarkdown] = useState(initialDraft.markdown);
+  const [sourceDraft, setSourceDraft] = useState(state.draft);
+  const [persistedMarkdown, setPersistedMarkdown] = useState(
+    getPersistedManualMarkdown(state.draft)
+  );
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [createVersionName, setCreateVersionName] = useState('');
@@ -116,19 +92,11 @@ export function useResumeStudioDialogController({
   const [isCreatingVersion, setIsCreatingVersion] = useState(false);
   const [isDeletingVersionId, setIsDeletingVersionId] = useState<number | null>(null);
   const [isSelectingVersionId, setIsSelectingVersionId] = useState<number | null>(null);
-  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const persistedDraft = state.draft ? toResumeStudioDraft(state.draft) : null;
-  const lastSavedDraftSignatureRef = useRef<string | null>(
-    persistedDraft ? serializeResumeStudioDraft(persistedDraft) : null
-  );
-  const liveDraftRef = useRef<ResumeStudioDraft | null>(persistedDraft);
-  const liveDraftSignatureRef = useRef<string | null>(
-    persistedDraft ? serializeResumeStudioDraft(persistedDraft) : null
-  );
-  const persistedDraftRef = useRef<ResumeStudioDraft | null>(persistedDraft);
-  const sourceDraftRef = useRef(state.draft);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const previewData = state.draft;
+  const [isVersionsMenuOpen, setIsVersionsMenuOpen] = useState(false);
+  const loadedVersionIdRef = useRef(state.activeVersionId);
+  const wasOpenRef = useRef(open);
+  const savePromiseRef = useRef<Promise<ResumeStudioState | null> | null>(null);
+  const hasUnsavedChanges = markdown !== persistedMarkdown;
   const autosaveStatusLabel = getAutosaveStatusLabel({
     errorMessage,
     hasUnsavedChanges,
@@ -139,113 +107,181 @@ export function useResumeStudioDialogController({
     !isSaving &&
     !isCreatingVersion &&
     isDeletingVersionId === null &&
-    isSelectingVersionId === null;
+    isSelectingVersionId === null &&
+    !isPublishing;
   const canPublish =
     !hasUnsavedChanges &&
     !isSaving &&
     !isPublishing &&
     (!state.isActiveVersionPublished || state.hasUnpublishedChanges);
+  const previewData =
+    sourceDraft ? applyResumeStudioDraft(sourceDraft, { markdown }) : null;
   const publishButtonLabel =
     isPublishing
-      ? 'Publishing…'
+      ? 'Publishing...'
       : state.isActiveVersionPublished && !state.hasUnpublishedChanges
         ? 'Published'
         : 'Publish';
 
-  const saveDraftValues = useEffectEvent(async (values: ResumeStudioDraft) => {
-    const sourceDraft = sourceDraftRef.current;
+  const syncLoadedState = useEffectEvent(
+    (nextState: ResumeStudioState, { resetForm }: { resetForm: boolean }) => {
+      if (!nextState.draft) {
+        return;
+      }
 
+      const nextDraft = toResumeStudioDraft(nextState.draft);
+
+      loadedVersionIdRef.current = nextState.activeVersionId;
+      setSourceDraft(nextState.draft);
+      setPersistedMarkdown(getPersistedManualMarkdown(nextState.draft));
+      setMarkdown(nextDraft.markdown);
+      form.clearErrors();
+
+      if (resetForm) {
+        form.reset(nextDraft);
+      }
+
+      onStateChange(nextState);
+    }
+  );
+
+  const saveDraftValues = useEffectEvent(async (markdownToSave: string) => {
     if (!sourceDraft) {
       return null;
+    }
+
+    if (savePromiseRef.current) {
+      await savePromiseRef.current;
+
+      if (markdownToSave === persistedMarkdown) {
+        return state;
+      }
     }
 
     setErrorMessage(null);
     setIsSaving(true);
 
-    try {
-      const nextState = await saveResumeStudioDraft({
-        draft: applyResumeStudioDraft(sourceDraft, values),
-      });
-      const savedDraft = toResumeStudioDraft(nextState.draft!);
-      const nextLiveDraft = mergeResumeStudioDraft(
-        savedDraft,
-        form.getValues() as Partial<ResumeStudioDraft>
-      );
-      const savedDraftSignature = serializeResumeStudioDraft(savedDraft);
-      const nextLiveDraftSignature = serializeResumeStudioDraft(nextLiveDraft);
+    const savePromise = (async () => {
+      try {
+        const nextState = await saveResumeStudioDraft({
+          draft: applyResumeStudioDraft(sourceDraft, {
+            markdown: markdownToSave,
+          }),
+        });
 
-      form.clearErrors();
-      sourceDraftRef.current = nextState.draft;
-      persistedDraftRef.current = savedDraft;
-      liveDraftRef.current = nextLiveDraft;
-      liveDraftSignatureRef.current = nextLiveDraftSignature;
-      lastSavedDraftSignatureRef.current = savedDraftSignature;
-      setHasUnsavedChanges(nextLiveDraftSignature !== savedDraftSignature);
-      onStateChange(nextState);
-      return nextState;
-    } catch (error) {
-      if (error instanceof ResumeStudioApiError && error.fieldErrors) {
-        for (const [fieldName, message] of Object.entries(error.fieldErrors)) {
-          form.setError(fieldName as Path<ResumeStudioDraft>, {
-            message,
-            type: 'server',
-          });
+        syncLoadedState(nextState, { resetForm: false });
+        return nextState;
+      } catch (error) {
+        if (error instanceof ResumeStudioApiError && error.fieldErrors) {
+          for (const [fieldName, message] of Object.entries(error.fieldErrors)) {
+            const nextFieldName = toFieldName(fieldName);
+
+            if (!nextFieldName) {
+              continue;
+            }
+
+            form.setError(nextFieldName, {
+              message,
+              type: 'server',
+            });
+          }
         }
-      }
 
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Could not save the version.'
-      );
-      return null;
+        setErrorMessage(
+          error instanceof Error ? error.message : 'Could not save the version.'
+        );
+        return null;
+      } finally {
+        setIsSaving(false);
+      }
+    })();
+
+    savePromiseRef.current = savePromise;
+
+    try {
+      return await savePromise;
     } finally {
-      setIsSaving(false);
+      if (savePromiseRef.current === savePromise) {
+        savePromiseRef.current = null;
+      }
     }
   });
 
-  const scheduleStructuralDraftSync = useResumeStudioDraftSync({
-    form,
-    hasUnsavedChanges,
-    isAutosavePaused:
-      isSaving ||
-      isCreatingVersion ||
-      isDeletingVersionId !== null ||
-      isSelectingVersionId !== null ||
-      isPublishing,
-    lastSavedDraftSignatureRef,
-    liveDraftRef,
-    liveDraftSignatureRef,
-    onAutosaveDraft: saveDraftValues,
-    open,
-    persistedDraftRef,
-    setHasUnsavedChanges,
-    sourceDraftRef,
-    state,
+  const flushDraft = useEffectEvent(async () => {
+    if (savePromiseRef.current) {
+      await savePromiseRef.current;
+    }
+
+    if (!sourceDraft || markdown === persistedMarkdown) {
+      return state;
+    }
+
+    return saveDraftValues(markdown);
   });
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    const reopened = open && !wasOpenRef.current;
+    const versionChanged = loadedVersionIdRef.current !== state.activeVersionId;
+
+    wasOpenRef.current = open;
+
+    if (!state.draft) {
       return;
     }
 
-    window.sessionStorage.setItem('resume-studio-step', currentStep);
-  }, [currentStep]);
+    if (!reopened && !versionChanged) {
+      return;
+    }
+
+    syncLoadedState(state, { resetForm: true });
+    setCreateVersionName('');
+    setErrorMessage(null);
+    setStatusMessage(null);
+    setIsVersionsMenuOpen(false);
+  }, [open, state, syncLoadedState]);
+
+  useEffect(() => {
+    if (
+      !open ||
+      !sourceDraft ||
+      isSaving ||
+      isPublishing ||
+      isCreatingVersion ||
+      isDeletingVersionId !== null ||
+      isSelectingVersionId !== null ||
+      markdown === persistedMarkdown
+    ) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void saveDraftValues(markdown);
+    }, RESUME_STUDIO_AUTOSAVE_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    isCreatingVersion,
+    isDeletingVersionId,
+    isPublishing,
+    isSaving,
+    isSelectingVersionId,
+    markdown,
+    open,
+    persistedMarkdown,
+    saveDraftValues,
+    sourceDraft,
+  ]);
 
   async function handleCreateVersion() {
     setErrorMessage(null);
     setStatusMessage(null);
 
-    if (hasUnsavedChanges) {
-      const liveDraft = liveDraftRef.current;
+    const flushedState = await flushDraft();
 
-      if (!liveDraft) {
-        return;
-      }
-
-      const savedState = await saveDraftValues(liveDraft);
-
-      if (!savedState) {
-        return;
-      }
+    if (!flushedState) {
+      return;
     }
 
     setIsCreatingVersion(true);
@@ -255,9 +291,9 @@ export function useResumeStudioDialogController({
         name: createVersionName,
       });
 
-      onStateChange(nextState);
-      setActiveTab('edit');
+      syncLoadedState(nextState, { resetForm: true });
       setCreateVersionName('');
+      setIsVersionsMenuOpen(false);
       setStatusMessage(
         `${nextState.activeVersionName || 'New version'} created and opened for editing.`
       );
@@ -275,8 +311,9 @@ export function useResumeStudioDialogController({
     setStatusMessage(null);
     setIsSelectingVersionId(versionId);
 
-    if (hasUnsavedChanges) {
-      setErrorMessage('Wait for the current draft to finish saving before switching to another version.');
+    const flushedState = await flushDraft();
+
+    if (!flushedState) {
       setIsSelectingVersionId(null);
       return;
     }
@@ -284,8 +321,8 @@ export function useResumeStudioDialogController({
     try {
       const nextState = await selectResumeStudioVersion(versionId);
 
-      onStateChange(nextState);
-      setActiveTab('edit');
+      syncLoadedState(nextState, { resetForm: true });
+      setIsVersionsMenuOpen(false);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : 'Could not open the selected version.'
@@ -305,7 +342,9 @@ export function useResumeStudioDialogController({
         state.versions.find((version) => version.id === versionId)?.name || 'Version';
       const nextState = await deleteResumeStudioVersion(versionId);
 
-      onStateChange(nextState);
+      syncLoadedState(nextState, {
+        resetForm: nextState.activeVersionId !== state.activeVersionId,
+      });
       setStatusMessage(`${deletedVersionName} deleted.`);
     } catch (error) {
       setErrorMessage(
@@ -320,8 +359,9 @@ export function useResumeStudioDialogController({
     setErrorMessage(null);
     setStatusMessage(null);
 
-    if (hasUnsavedChanges || isSaving) {
-      setErrorMessage('Wait for the current draft to finish saving before publishing.');
+    const flushedState = await flushDraft();
+
+    if (!flushedState) {
       return;
     }
 
@@ -330,7 +370,7 @@ export function useResumeStudioDialogController({
     try {
       const nextState = await publishResumeStudioVersion();
 
-      onStateChange(nextState);
+      syncLoadedState(nextState, { resetForm: false });
       publishResumeStudioPreview(nextState.draft!);
       setStatusMessage(
         `${nextState.activeVersionName || 'Current version'} published to src/data/resume.private.json.`
@@ -344,106 +384,45 @@ export function useResumeStudioDialogController({
     }
   }
 
-  async function handleOpenVersionsTab() {
-    if (isSaving || isCreatingVersion || isDeletingVersionId !== null || isSelectingVersionId !== null) {
-      return;
-    }
-
-    if (hasUnsavedChanges) {
-      const liveDraft = liveDraftRef.current;
-
-      if (!liveDraft) {
-        return;
-      }
-
-      const savedState = await saveDraftValues(liveDraft);
-
-      if (!savedState) {
-        return;
-      }
-    }
-
-    setActiveTab('versions');
-  }
-
-  async function handleUploadPhoto(file: File) {
-    setErrorMessage(null);
-    setStatusMessage(null);
-    setIsUploadingPhoto(true);
-
-    try {
-      const nextPhoto = await uploadResumeStudioPhoto({
-        bytesBase64: await readFileAsBase64(file),
-        fileName: file.name,
-      });
-
-      form.setValue('basics.photoSrc', nextPhoto.src, { shouldDirty: true });
-      setStatusMessage('Portrait uploaded. Resume Studio will save it locally.');
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Could not upload the portrait.'
-      );
-    } finally {
-      setIsUploadingPhoto(false);
-    }
-  }
-
   async function handleOpenStateChange(nextOpen: boolean) {
     if (nextOpen) {
       onOpenChange(true);
       return;
     }
 
-    let nextState = state;
+    const nextState = await flushDraft();
 
-    if (hasUnsavedChanges) {
-      const liveDraft = liveDraftRef.current;
-
-      if (!persistedDraft || !liveDraft) {
-        return;
-      }
-
-      const savedState = await saveDraftValues(liveDraft);
-
-      if (!savedState) {
-        return;
-      }
-
-      nextState = savedState;
+    if (!nextState) {
+      return;
     }
 
     publishResumeStudioPreview(nextState.publishedDraft || nextState.draft!);
-    setActiveTab('edit');
-    onStateChange(nextState);
+    setIsVersionsMenuOpen(false);
     onOpenChange(false);
   }
 
   return {
-    activeTab,
     autosaveStatusLabel,
     canCreateVersion,
     canPublish,
     createVersionName,
-    currentStep,
     errorMessage,
     form,
     handleCreateVersion,
     handleDeleteVersion,
     handleOpenStateChange,
-    handleOpenVersionsTab,
     handlePublishVersion,
     handleSelectVersion,
-    handleUploadPhoto,
     isCreatingVersion,
     isDeletingVersionId,
     isSelectingVersionId,
-    isUploadingPhoto,
+    isVersionsMenuOpen,
+    markdown,
     previewData,
     publishButtonLabel,
-    setActiveTab,
+    setMarkdown,
     setCreateVersionName,
-    setCurrentStep,
-    scheduleStructuralDraftSync,
+    setIsVersionsMenuOpen,
     statusMessage,
   };
 }

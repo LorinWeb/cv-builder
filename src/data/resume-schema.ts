@@ -33,6 +33,10 @@ const resumePhotoSchema = z.object({
   src: z.string(),
 });
 
+const resumeManualSchema = z.object({
+  markdown: z.string(),
+});
+
 const resumeBasicsSchema = z.object({
   email: z.string().optional(),
   impact: z.array(textValueSchema).optional(),
@@ -126,11 +130,25 @@ export const resumeDataSchema = z.object({
   education: z.array(educationItemSchema).optional(),
   interests: z.array(resumeInterestSchema).optional(),
   languages: z.array(resumeLanguageSchema).optional(),
+  manual: resumeManualSchema.optional(),
+  mode: z.enum(['structured', 'manual']).default('structured'),
   publications: z.array(resumePublicationSchema).optional(),
   references: z.array(resumeReferenceSchema).optional(),
   skills: z.array(skillCategorySchema).optional(),
   volunteer: z.array(resumeVolunteerItemSchema).optional(),
   work: z.array(resumeWorkItemSchema).optional(),
+}).superRefine((value, context) => {
+  if (value.mode !== 'manual') {
+    return;
+  }
+
+  if (!value.manual || value.manual.markdown.trim().length === 0) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Manual resume markdown is required when mode is manual.',
+      path: ['manual', 'markdown'],
+    });
+  }
 });
 
 export function parseResumeData(value: unknown): ResumeSourceData {

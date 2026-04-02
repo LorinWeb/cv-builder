@@ -1,4 +1,4 @@
-import { formatDateRangeWithDuration } from '../../helpers/date-range';
+import { formatDateRange, formatDateRangeWithDuration } from '../../helpers/date-range';
 import { joinClassNames } from '../../helpers/classNames';
 import { ResumeMarkdown } from '../../helpers/resume-markdown';
 import { getPrintClassNames } from '../../helpers/print';
@@ -13,6 +13,17 @@ import type {
 interface WorkExperienceItemProps {
   className?: string;
   item: ResumeWorkItem;
+  showDuration?: boolean;
+}
+
+function getDateRangeLabel(
+  startDate: string,
+  endDate: string | null | undefined,
+  showDuration: boolean
+) {
+  return showDuration
+    ? formatDateRangeWithDuration(startDate, endDate)
+    : formatDateRange(startDate, endDate);
 }
 
 function getProgressionBounds(entries: ResumeWorkEntry[]) {
@@ -59,7 +70,11 @@ function renderHighlights(highlights?: TextValue[]) {
   );
 }
 
-function renderSingleWorkItem(item: ResumeWorkEntry, className?: string) {
+function renderSingleWorkItem(
+  item: ResumeWorkEntry,
+  showDuration: boolean,
+  className?: string
+) {
   const { company, endDate, highlights, position, startDate, summary } = item;
 
   return (
@@ -67,15 +82,15 @@ function renderSingleWorkItem(item: ResumeWorkEntry, className?: string) {
       data-testid="work-experience-item"
       className={joinClassNames('mb-5 mt-3.75', className)}
     >
-      <h3 className="mb-0 flex flex-wrap items-baseline gap-1 font-medium text-(--color-company-role)">
+      <h3 className="mb-0 flex flex-wrap items-baseline gap-1 font-medium text-(--color-experience-headline)">
         {position}
         <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
-          <span className="font-light text-(--color-section-subtitle)">@</span>
-          <span className="font-light text-(--color-company-name)">{company}</span>
+          <span className="font-light">@</span>
+          <span className="font-light">{company}</span>
         </span>
       </h3>
-      <p className="my-[0.5em] mt-0 block text-[0.85em]">
-        {formatDateRangeWithDuration(startDate, endDate)}
+      <p data-testid="work-experience-date" className="my-[0.5em] mt-0 block text-[0.85em]">
+        {getDateRangeLabel(startDate, endDate, showDuration)}
       </p>
       <ResumeMarkdown
         className="my-[0.5em] mb-0"
@@ -87,18 +102,18 @@ function renderSingleWorkItem(item: ResumeWorkEntry, className?: string) {
   );
 }
 
-function renderProgressionEntry(entry: ResumeWorkEntry) {
+function renderProgressionEntry(entry: ResumeWorkEntry, showDuration: boolean) {
   return (
     <article
       data-testid="work-progression-entry"
       className={joinClassNames('mb-4.5 last:mb-0', getPrintClassNames(entry))}
       key={`${entry.company}-${entry.position}-${entry.startDate}`}
     >
-      <h4 className="mb-0 mt-2.5 flex flex-wrap items-baseline gap-1 font-medium text-(--color-company-role)">
+      <h4 className="mb-0 mt-2.5 flex flex-wrap items-baseline gap-1 font-medium text-(--color-experience-headline)">
         {entry.position}
       </h4>
-      <p className="my-[0.5em] mt-0 block text-[0.85em]">
-        {formatDateRangeWithDuration(entry.startDate, entry.endDate)}
+      <p data-testid="work-experience-date" className="my-[0.5em] mt-0 block text-[0.85em]">
+        {getDateRangeLabel(entry.startDate, entry.endDate, showDuration)}
       </p>
       <ResumeMarkdown
         className="my-[0.5em] mb-0"
@@ -110,7 +125,11 @@ function renderProgressionEntry(entry: ResumeWorkEntry) {
   );
 }
 
-function renderProgressionGroup(item: ResumeWorkGroup, className?: string) {
+function renderProgressionGroup(
+  item: ResumeWorkGroup,
+  showDuration: boolean,
+  className?: string
+) {
   const progression = item.progression || [];
   const companyName = item.company || progression[0]?.company || '';
   const { endDate, startDate } = getProgressionBounds(progression);
@@ -121,20 +140,20 @@ function renderProgressionGroup(item: ResumeWorkGroup, className?: string) {
       className={joinClassNames('mb-5.5 mt-4.5', className)}
     >
       <header className="mb-2.5">
-        <h3 className="m-0 font-medium text-(--color-company-name)">
+        <h3 className="m-0 font-medium text-(--color-experience-headline)">
           <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
             <span>@</span>
             <span>{companyName}</span>
           </span>
         </h3>
         {startDate ? (
-          <p className="m-0 text-[0.85em]">
-            {formatDateRangeWithDuration(startDate, endDate)}
+          <p data-testid="work-experience-date" className="m-0 text-[0.85em]">
+            {getDateRangeLabel(startDate, endDate, showDuration)}
           </p>
         ) : null}
       </header>
       <div className="ml-0.5 border-l border-l-(--color-main-border) pl-3.5">
-        {progression.map(renderProgressionEntry)}
+        {progression.map((entry) => renderProgressionEntry(entry, showDuration))}
       </div>
     </article>
   );
@@ -144,12 +163,16 @@ function isProgressionGroup(item: ResumeWorkItem): item is ResumeWorkGroup {
   return Array.isArray((item as ResumeWorkGroup).progression);
 }
 
-function WorkExperienceItem({ className, item }: WorkExperienceItemProps) {
+function WorkExperienceItem({
+  className,
+  item,
+  showDuration = true,
+}: WorkExperienceItemProps) {
   if (isProgressionGroup(item)) {
-    return renderProgressionGroup(item, className);
+    return renderProgressionGroup(item, showDuration, className);
   }
 
-  return renderSingleWorkItem(item, className);
+  return renderSingleWorkItem(item, showDuration, className);
 }
 
 export default WorkExperienceItem;

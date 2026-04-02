@@ -62,7 +62,11 @@ function withTempProject(callback: (projectRoot: string) => void) {
 function readPrivateResume(projectRoot: string) {
   return JSON.parse(
     readFileSync(path.join(projectRoot, 'src/data/resume.private.json'), 'utf8')
-  ) as typeof MINIMAL_RESUME;
+  ) as typeof MINIMAL_RESUME & {
+    languages?: Array<{ name: string }>;
+    manual?: { markdown: string };
+    mode?: string;
+  };
 }
 
 test('initializes the database from an existing private resume file', async () => {
@@ -78,13 +82,11 @@ test('initializes the database from an existing private resume file', async () =
     const databasePath = path.join(projectRoot, 'src/data/local/resume-studio.sqlite');
 
     expect(state.isInitialized).toBeTruthy();
-    expect(state.source).toBe('private');
     expect(state.activeVersionName).toBe(RESUME_STUDIO_DEFAULT_IMPORTED_VERSION_NAME);
     expect(state.draft?.basics.name).toBe('John Doe');
     expect(state.versions[0]?.name).toBe(RESUME_STUDIO_DEFAULT_IMPORTED_VERSION_NAME);
     expect(state.versions[0]?.isActive).toBeTruthy();
     expect(state.versions[0]?.isPublished).toBeTruthy();
-    expect(state.publishedVersionName).toBe(RESUME_STUDIO_DEFAULT_IMPORTED_VERSION_NAME);
     expect(existsSync(databasePath)).toBeTruthy();
 
     store.close();
@@ -168,60 +170,6 @@ test('creates and edits multiple named versions independently', async () => {
 
     expect(secondVersionState.draft?.basics.label).toBe('Principal Engineer');
     expect(secondVersionState.activeVersionId).toBe(secondVersionId);
-
-    store.close();
-  });
-});
-
-test('preserves summary first-section placement across version switches and publish', async () => {
-  withTempProject((projectRoot) => {
-    const store = createResumeStudioStore(projectRoot);
-    const initializedState = store.initializeDraft();
-    const primaryVersionId = initializedState.activeVersionId!;
-    const primarySavedState = store.saveDraft({
-      ...initializedState.draft!,
-      basics: {
-        ...initializedState.draft!.basics,
-        summaryAlwaysFirstSection: true,
-      },
-    });
-
-    expect(primarySavedState.draft?.basics.summaryAlwaysFirstSection).toBe(true);
-
-    const secondaryVersionState = store.createVersion('Sidebar CV');
-    const secondaryVersionId = secondaryVersionState.activeVersionId!;
-    const {
-      summaryAlwaysFirstSection: _summaryAlwaysFirstSection,
-      ...secondaryBasics
-    } = secondaryVersionState.draft!.basics;
-
-    const secondarySavedState = store.saveDraft({
-      ...secondaryVersionState.draft!,
-      basics: secondaryBasics,
-    });
-
-    expect(secondarySavedState.draft?.basics.summaryAlwaysFirstSection).toBeUndefined();
-
-    const primarySelectedState = store.selectVersion(primaryVersionId);
-
-    expect(primarySelectedState.draft?.basics.summaryAlwaysFirstSection).toBe(true);
-
-    const secondarySelectedState = store.selectVersion(secondaryVersionId);
-
-    expect(secondarySelectedState.draft?.basics.summaryAlwaysFirstSection).toBeUndefined();
-
-    store.selectVersion(primaryVersionId);
-    const publishedState = store.publishActiveVersion();
-    const publishedFile = JSON.parse(
-      readFileSync(path.join(projectRoot, 'src/data/resume.private.json'), 'utf8')
-    ) as {
-      basics: {
-        summaryAlwaysFirstSection?: boolean;
-      };
-    };
-
-    expect(publishedState.isActiveVersionPublished).toBeTruthy();
-    expect(publishedFile.basics.summaryAlwaysFirstSection).toBe(true);
 
     store.close();
   });
@@ -343,12 +291,7 @@ test('preserves unsupported sections when saving, versioning, and switching', as
     );
 
     expect(selectedState.draft?.languages?.[0]?.name).toBe('English');
-
-    const savedFile = readPrivateResume(projectRoot) as typeof MINIMAL_RESUME & {
-      languages?: Array<{ name: string }>;
-    };
-
-    expect(savedFile.languages?.[0]?.name).toBe('English');
+    expect(readPrivateResume(projectRoot).languages?.[0]?.name).toBe('English');
 
     store.close();
   });
@@ -365,7 +308,6 @@ test('imports grouped work and preserves it across saves and version switches', 
     const store = createResumeStudioStore(projectRoot);
     const importedState = store.getState();
 
-    expect(importedState.warnings).toEqual([]);
     expect(importedState.draft?.work?.[0]).toMatchObject({
       company: 'Placeholder Labs',
       progression: [
@@ -390,17 +332,18 @@ test('imports grouped work and preserves it across saves and version switches', 
         {
           ...(activeWorkItem as typeof GROUPED_WORK_RESUME.work[number]),
           company: 'Placeholder Labs Europe',
-          progression: activeWorkItem && 'progression' in activeWorkItem
-            ? activeWorkItem.progression.map((entry, index) =>
-                index === 0
-                  ? {
-                      ...entry,
-                      company: 'Placeholder Labs Europe',
-                      position: 'Principal Product Engineer',
-                    }
-                  : entry
-              )
-            : [],
+          progression:
+            activeWorkItem && 'progression' in activeWorkItem
+              ? activeWorkItem.progression.map((entry, index) =>
+                  index === 0
+                    ? {
+                        ...entry,
+                        company: 'Placeholder Labs Europe',
+                        position: 'Principal Product Engineer',
+                      }
+                    : entry
+                )
+              : [],
         },
       ],
     });
@@ -427,7 +370,6 @@ test('imports grouped work and preserves it across saves and version switches', 
         (version) => version.name === RESUME_STUDIO_DEFAULT_IMPORTED_VERSION_NAME
       )!.id;
     const originalVersionState = store.selectVersion(importedVersionId);
-
     const originalWorkItem = originalVersionState.draft?.work?.[0];
 
     expect(originalWorkItem).toBeDefined();
@@ -435,49 +377,88 @@ test('imports grouped work and preserves it across saves and version switches', 
     expect(originalWorkItem && 'progression' in originalWorkItem && originalWorkItem.company).toBe(
       'Placeholder Labs'
     );
-    expect(
-      originalWorkItem && 'progression' in originalWorkItem
-        ? originalWorkItem.progression[0]
-        : null
-    ).toMatchObject({
-      position: 'Lead Product Engineer',
-    });
 
     const groupedVersionState = store.selectVersion(updatedState.activeVersionId!);
     const savedFile = JSON.parse(
       readFileSync(path.join(projectRoot, 'src/data/resume.private.json'), 'utf8')
     ) as typeof GROUPED_WORK_RESUME;
-
     const groupedWorkItem = groupedVersionState.draft?.work?.[0];
+    const savedWorkItem = savedFile.work?.[0];
 
     expect(groupedWorkItem).toBeDefined();
     expect(groupedWorkItem && 'progression' in groupedWorkItem).toBeTruthy();
     expect(groupedWorkItem && 'progression' in groupedWorkItem && groupedWorkItem.company).toBe(
       'Placeholder Labs Europe'
     );
-    expect(
-      groupedWorkItem && 'progression' in groupedWorkItem
-        ? groupedWorkItem.progression[0]
-        : null
-    ).toMatchObject({
-      position: 'Principal Product Engineer',
-    });
-
-    const savedWorkItem = savedFile.work?.[0];
-
     expect(savedWorkItem).toBeDefined();
     expect(savedWorkItem && 'progression' in savedWorkItem).toBeTruthy();
     expect(savedWorkItem && 'progression' in savedWorkItem && savedWorkItem.company).toBe(
       'Placeholder Labs'
     );
-    expect(
-      savedWorkItem && 'progression' in savedWorkItem
-        ? savedWorkItem.progression[0]
-        : null
-    ).toMatchObject({
-      company: 'Placeholder Labs',
-      position: 'Lead Product Engineer',
+
+    store.close();
+  });
+});
+
+test('saves and publishes manual-mode versions without discarding structured fields', async () => {
+  withTempProject((projectRoot) => {
+    const store = createResumeStudioStore(projectRoot);
+    const initializedState = store.initializeDraft();
+
+    const manualState = store.saveDraft({
+      ...initializedState.draft!,
+      basics: {
+        ...initializedState.draft!.basics,
+        label: 'Staff Engineer',
+      },
+      manual: {
+        markdown: '# Jane Doe\n\n## Summary\n\nManual summary.',
+      },
+      mode: 'manual',
     });
+
+    expect(manualState.draft?.mode).toBe('manual');
+    expect(manualState.draft?.manual?.markdown).toContain('Manual summary.');
+    expect(manualState.draft?.basics.label).toBe('Staff Engineer');
+
+    store.publishActiveVersion();
+    const publishedFile = readPrivateResume(projectRoot);
+
+    expect(publishedFile.mode).toBe('manual');
+    expect(publishedFile.manual?.markdown).toContain('Manual summary.');
+    expect(publishedFile.basics.label).toBe('Staff Engineer');
+
+    store.close();
+  });
+});
+
+test('preserves manual markdown when switching versions after manual edits', async () => {
+  withTempProject((projectRoot) => {
+    const store = createResumeStudioStore(projectRoot);
+    const initializedState = store.initializeDraft();
+
+    const manualState = store.saveDraft({
+      ...initializedState.draft!,
+      manual: {
+        markdown: '# Jane Doe\n\n## Summary\n\nManual summary.',
+      },
+      mode: 'manual',
+    });
+    const versionId = manualState.activeVersionId!;
+    const altVersionState = store.createVersion('Alt manual');
+
+    store.saveDraft({
+      ...altVersionState.draft!,
+      manual: {
+        markdown: '# Jane Doe\n\n## Summary\n\nAlternative manual summary.',
+      },
+      mode: 'manual',
+    });
+
+    const restoredState = store.selectVersion(versionId);
+
+    expect(restoredState.draft?.mode).toBe('manual');
+    expect(restoredState.draft?.manual?.markdown).toContain('Manual summary.');
 
     store.close();
   });

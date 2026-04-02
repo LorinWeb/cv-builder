@@ -1,12 +1,16 @@
-import { existsSync, readFileSync } from 'node:fs';
+import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 
 import { expect, test } from '@playwright/test';
+import { createServer, type InlineConfig, type ViteDevServer } from 'vite';
 
 import { RESUME_STUDIO_WATCH_IGNORED_PATTERNS } from '../src/features/resume-studio/constants';
-import { writeResumeStudioPhotoUpload } from '../src/features/resume-studio/server/photo-upload';
 import { createAppViteConfig } from '../vite.config';
-import { createTempProjectRoot, destroyTempProjectRoot } from './support/temp-project';
+import {
+  createTempProjectRoot,
+  destroyTempProjectRoot,
+  writeProjectFile,
+} from './support/temp-project';
 
 test('configures Vite to ignore the sqlite sidecar files and use the provided data root', async () => {
   const projectRoot = createTempProjectRoot('resume-studio-config-');
@@ -29,21 +33,95 @@ test('configures Vite to ignore the sqlite sidecar files and use the provided da
   }
 });
 
-test('writes uploaded portraits under public/static/private and returns the served src', async () => {
-  const projectRoot = createTempProjectRoot('resume-studio-upload-');
+test.describe.serial('Resume Studio server validation', () => {
+  let server: ViteDevServer | null = null;
+  let devServerPort: number;
+  let projectRoot: string;
 
-  try {
-    const result = writeResumeStudioPhotoUpload(
+  test.beforeAll(async () => {
+    projectRoot = createTempProjectRoot('resume-studio-server-');
+    writeProjectFile(
       projectRoot,
-      'Portrait.JPG',
-      Buffer.from('fake image bytes').toString('base64')
+      'src/data/resume.sample.json',
+      JSON.stringify(
+        {
+          basics: {
+            label: 'Template Engineer',
+            name: 'John Doe',
+            summary: 'Template summary',
+          },
+        },
+        null,
+        2
+      )
     );
-    const uploadedPath = path.join(projectRoot, 'public', result.src.replace(/^\//, ''));
 
-    expect(result.src).toMatch(/^\/static\/private\/portrait-\d+\.jpg$/);
-    expect(existsSync(uploadedPath)).toBeTruthy();
-    expect(readFileSync(uploadedPath, 'utf8')).toBe('fake image bytes');
-  } finally {
+    const config: InlineConfig = {
+      ...createAppViteConfig({
+        command: 'serve',
+        dataProjectRoot: projectRoot,
+        enableResumePdf: false,
+        enableResumeStudio: true,
+        mode: 'development',
+      }),
+      configFile: false,
+    };
+    config.server = {
+      ...config.server,
+      port: 0,
+    };
+
+    server = await createServer(config);
+    await server.listen();
+    const address = server.httpServer?.address();
+
+    if (!address || typeof address === 'string') {
+      throw new Error('Could not resolve the Resume Studio server test port.');
+    }
+
+    devServerPort = (address as AddressInfo).port;
+  });
+
+  test.afterAll(async () => {
+    await server?.close();
     destroyTempProjectRoot(projectRoot);
-  }
+  });
+
+  test('rejects manual drafts without markdown', async () => {
+    const initResponse = await fetch(`http://127.0.0.1:${devServerPort}/__resume-studio/init`, {
+      method: 'POST',
+    });
+    const initializedState = (await initResponse.json()) as {
+      draft: {
+        basics: {
+          label: string;
+          name: string;
+          summary: string;
+        };
+      };
+    };
+
+    const response = await fetch(`http://127.0.0.1:${devServerPort}/__resume-studio/draft`, {
+      body: JSON.stringify({
+        draft: {
+          ...initializedState.draft,
+          mode: 'manual',
+        },
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      method: 'PUT',
+    });
+    const payload = (await response.json()) as {
+      error: string;
+      fieldErrors?: Record<string, string>;
+    };
+
+    expect(response.status).toBe(400);
+    expect(payload.error).toBe('Resume draft failed validation.');
+    expect(payload.fieldErrors?.['manual.markdown']).toBe(
+      'Manual resume markdown is required when mode is manual.'
+    );
+  });
 });

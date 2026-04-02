@@ -68,6 +68,54 @@ export function ResumeStudioLauncher() {
     window.sessionStorage.setItem('resume-studio-open', String(isOpen));
   }, [isOpen]);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const html = document.documentElement;
+    const body = document.body;
+    const appContainer = document.getElementById('root');
+    const previousHtmlOverflow = html.style.overflow;
+    const previousHtmlScrollbarGutter = html.style.scrollbarGutter;
+    const previousBodyOverflow = body.style.overflow;
+    const previousRootOverflow = appContainer?.style.overflow ?? '';
+
+    if (isOpen) {
+      html.dataset.resumeStudioOpen = 'true';
+      body.dataset.resumeStudioOpen = 'true';
+      html.style.overflow = 'hidden';
+      html.style.scrollbarGutter = 'auto';
+      body.style.overflow = 'hidden';
+      if (appContainer) {
+        appContainer.dataset.resumeStudioOpen = 'true';
+        appContainer.style.overflow = 'hidden';
+      }
+    } else {
+      delete html.dataset.resumeStudioOpen;
+      delete body.dataset.resumeStudioOpen;
+      html.style.overflow = '';
+      html.style.scrollbarGutter = '';
+      body.style.overflow = '';
+      if (appContainer) {
+        delete appContainer.dataset.resumeStudioOpen;
+        appContainer.style.overflow = '';
+      }
+    }
+
+    return () => {
+      delete html.dataset.resumeStudioOpen;
+      delete body.dataset.resumeStudioOpen;
+      html.style.overflow = previousHtmlOverflow;
+      html.style.scrollbarGutter = previousHtmlScrollbarGutter;
+      body.style.overflow = previousBodyOverflow;
+      if (appContainer) {
+        delete appContainer.dataset.resumeStudioOpen;
+        appContainer.style.overflow = previousRootOverflow;
+      }
+    };
+  }, [isOpen]);
+
   if (!isResumeStudioEnabled()) {
     return null;
   }

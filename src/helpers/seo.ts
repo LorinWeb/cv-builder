@@ -1,4 +1,9 @@
-import type { ResumeData, ResumeSourceData } from '../data/types/resume';
+import type { ResumeRuntimeData } from '../data/types/resume';
+import {
+  getManualResumeDescriptionText,
+  getManualResumeTitleText,
+  getResumeMode,
+} from './manual-resume';
 import { stripMarkdownToPlainText } from './markdown';
 
 function normalizeWhitespace(value: string): string {
@@ -6,8 +11,14 @@ function normalizeWhitespace(value: string): string {
 }
 
 export function getDocumentTitle(
-  resumeData: Pick<ResumeData, 'basics'> | Pick<ResumeSourceData, 'basics'>
+  resumeData: ResumeRuntimeData
 ): string {
+  if (getResumeMode(resumeData) === 'manual') {
+    const title = getManualResumeTitleText(resumeData.manual?.markdown || '');
+
+    return title ? `${title} CV` : 'Resume';
+  }
+
   const rawName = resumeData.basics?.name;
 
   if (typeof rawName !== 'string') {
@@ -24,8 +35,22 @@ export function getDocumentTitle(
 }
 
 export function getMetaDescription(
-  resumeData: Pick<ResumeData, 'basics'> | Pick<ResumeSourceData, 'basics'>
+  resumeData: ResumeRuntimeData
 ): string {
+  if (getResumeMode(resumeData) === 'manual') {
+    const summary = getManualResumeDescriptionText(resumeData.manual?.markdown || '');
+
+    if (!summary) {
+      throw new Error(
+        'Cannot generate meta description: manual resume markdown must include visible text.'
+      );
+    }
+
+    const firstSentence = summary.match(/^[^.]*\./)?.[0];
+
+    return firstSentence ? firstSentence.trim() : summary;
+  }
+
   const rawSummary = resumeData.basics?.summary;
 
   if (typeof rawSummary !== 'string') {

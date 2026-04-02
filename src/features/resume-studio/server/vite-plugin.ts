@@ -8,10 +8,8 @@ import type {
   ResumeStudioApiErrorPayload,
   ResumeStudioCreateVersionPayload,
   ResumeStudioDraftPayload,
-  ResumeStudioPhotoUploadPayload,
 } from '../types';
 import { createResumeStudioStore } from '../storage/store';
-import { writeResumeStudioPhotoUpload } from './photo-upload';
 
 function sendJson(
   response: ServerResponse,
@@ -159,23 +157,6 @@ export function resumeStudioPlugin(projectRoot: string): Plugin {
         }
 
         sendJson(response, 200, store.selectVersion(versionId));
-        return;
-      }
-
-      if (
-        request.method === 'POST' &&
-        url.pathname === `${RESUME_STUDIO_API_ROOT}/upload-photo`
-      ) {
-        const payload = await readJsonBody<ResumeStudioPhotoUploadPayload>(request);
-        sendJson(
-          response,
-          200,
-          writeResumeStudioPhotoUpload(
-            projectRoot,
-            payload.fileName,
-            payload.bytesBase64
-          )
-        );
         return;
       }
 

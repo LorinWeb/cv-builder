@@ -1,53 +1,120 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 
 import type { ResumeSourceData } from '../../../data/types/resume';
 import {
   createResumeStudioPreviewMessage,
+  createResumeStudioScrollSyncSetMessage,
   getResumeStudioPreviewUrl,
-  RESUME_STUDIO_PREVIEW_EVENT,
+  getResumeStudioScrollProgress,
+  getResumeStudioScrollTopForProgress,
+  isResumeStudioScrollSyncReadyMessage,
+  isResumeStudioScrollSyncUpdateMessage,
+  setResumeStudioScrollProgress,
 } from '../runtime';
 import {
   RESUME_STUDIO_PREVIEW_FRAME_HEIGHT,
   RESUME_STUDIO_PREVIEW_FRAME_WIDTH,
 } from '../constants';
 
+const SCROLL_SYNC_PROGRESS_EPSILON = 0.002;
+const SCROLL_SYNC_SCROLL_TOP_EPSILON = 1;
+
 interface ResumeStudioPreviewFrameProps {
   data: ResumeSourceData;
+  editorViewportRef: RefObject<HTMLDivElement | null>;
 }
 
-function getPreviewScale(width: number, height: number) {
-  if (width === 0 || height === 0) {
+function getPreviewScale(width: number) {
+  if (width === 0) {
     return 1;
   }
 
-  return Math.min(
-    width / RESUME_STUDIO_PREVIEW_FRAME_WIDTH,
-    height / RESUME_STUDIO_PREVIEW_FRAME_HEIGHT
+  return width / RESUME_STUDIO_PREVIEW_FRAME_WIDTH;
+}
+
+function getPreviewViewportHeight(height: number, scale: number) {
+  if (height === 0 || scale === 0) {
+    return RESUME_STUDIO_PREVIEW_FRAME_HEIGHT;
+  }
+
+  return height / scale;
+}
+
+function hasMeaningfulProgressDelta(current: number, next: number) {
+  return Math.abs(current - next) > SCROLL_SYNC_PROGRESS_EPSILON;
+}
+
+function hasMeaningfulScrollTopDelta(element: HTMLElement, progress: number) {
+  return (
+    Math.abs(element.scrollTop - getResumeStudioScrollTopForProgress(element, progress)) >
+    SCROLL_SYNC_SCROLL_TOP_EPSILON
   );
 }
 
 export function ResumeStudioPreviewFrame({
   data,
+  editorViewportRef,
 }: ResumeStudioPreviewFrameProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
   const latestDataRef = useRef(data);
+  const sharedProgressRef = useRef(0);
+  const editorScrollFrameRef = useRef<number | null>(null);
+  const editorResizeFrameRef = useRef<number | null>(null);
+  const clearEditorSuppressionFrameRef = useRef<number | null>(null);
+  const isFrameLoadedRef = useRef(false);
+  const isPreviewReadyRef = useRef(false);
+  const suppressedEditorScrollEventsRef = useRef(0);
   const [frameUrl] = useState(getResumeStudioPreviewUrl);
+  const [containerHeight, setContainerHeight] = useState(0);
   const [scale, setScale] = useState(1);
   const [isFrameLoaded, setIsFrameLoaded] = useState(false);
+  const iframeViewportHeight = getPreviewViewportHeight(containerHeight, scale);
 
-  function postPreviewMessage(nextData: ResumeSourceData) {
+  const postMessageToPreview = useCallback((message: unknown) => {
     const frameWindow = frameRef.current?.contentWindow;
 
     if (!frameWindow) {
       return;
     }
 
-    frameWindow.postMessage(
-      createResumeStudioPreviewMessage(nextData),
-      window.location.origin
-    );
-  }
+    frameWindow.postMessage(message, window.location.origin);
+  }, []);
+
+  const postPreviewMessage = useCallback((nextData: ResumeSourceData) => {
+    postMessageToPreview(createResumeStudioPreviewMessage(nextData));
+  }, [postMessageToPreview]);
+
+  const postScrollSyncSet = useCallback((progress: number) => {
+    if (!isFrameLoadedRef.current || !isPreviewReadyRef.current) {
+      return;
+    }
+
+    postMessageToPreview(createResumeStudioScrollSyncSetMessage(progress));
+  }, [postMessageToPreview]);
+
+  const scheduleEditorSuppressionReset = useCallback(() => {
+    if (clearEditorSuppressionFrameRef.current !== null) {
+      cancelAnimationFrame(clearEditorSuppressionFrameRef.current);
+    }
+
+    clearEditorSuppressionFrameRef.current = requestAnimationFrame(() => {
+      suppressedEditorScrollEventsRef.current = 0;
+      clearEditorSuppressionFrameRef.current = null;
+    });
+  }, []);
+
+  const applyEditorProgress = useCallback((progress: number) => {
+    const editorViewport = editorViewportRef.current;
+
+    if (!editorViewport || !hasMeaningfulScrollTopDelta(editorViewport, progress)) {
+      return;
+    }
+
+    suppressedEditorScrollEventsRef.current = 1;
+    setResumeStudioScrollProgress(editorViewport, progress);
+    scheduleEditorSuppressionReset();
+  }, [editorViewportRef, scheduleEditorSuppressionReset]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -57,7 +124,8 @@ export function ResumeStudioPreviewFrame({
     }
 
     const updateScale = () => {
-      setScale(getPreviewScale(container.clientWidth - 24, container.clientHeight - 24));
+      setContainerHeight(container.clientHeight);
+      setScale(getPreviewScale(container.clientWidth));
     };
 
     updateScale();
@@ -74,75 +142,153 @@ export function ResumeStudioPreviewFrame({
   useEffect(() => {
     latestDataRef.current = data;
 
-    if (!isFrameLoaded) {
+    if (isFrameLoaded) {
+      postPreviewMessage(data);
+    }
+  }, [data, isFrameLoaded, postPreviewMessage]);
+
+  useEffect(() => {
+    if (isFrameLoaded) {
+      postPreviewMessage(latestDataRef.current);
+    }
+  }, [isFrameLoaded, postPreviewMessage]);
+
+  useEffect(() => {
+    const editorViewport = editorViewportRef.current;
+
+    if (!editorViewport) {
       return;
     }
 
-    postPreviewMessage(data);
-  }, [data, isFrameLoaded]);
-
-  useEffect(() => {
-    if (!isFrameLoaded) {
-      return;
-    }
-
-    postPreviewMessage(latestDataRef.current);
-  }, [isFrameLoaded]);
-
-  useEffect(() => {
-    function handlePreviewEvent(event: Event) {
-      const previewEvent = event as CustomEvent<ResumeSourceData>;
-
-      latestDataRef.current = previewEvent.detail;
-
-      if (!isFrameLoaded) {
+    const syncEditorProgress = () => {
+      if (suppressedEditorScrollEventsRef.current > 0) {
+        suppressedEditorScrollEventsRef.current -= 1;
         return;
       }
 
-      postPreviewMessage(previewEvent.detail);
+      if (editorScrollFrameRef.current !== null) {
+        cancelAnimationFrame(editorScrollFrameRef.current);
+      }
+
+      editorScrollFrameRef.current = requestAnimationFrame(() => {
+        editorScrollFrameRef.current = null;
+        const nextProgress = getResumeStudioScrollProgress(editorViewport);
+
+        if (!hasMeaningfulProgressDelta(sharedProgressRef.current, nextProgress)) {
+          return;
+        }
+
+        sharedProgressRef.current = nextProgress;
+        postScrollSyncSet(nextProgress);
+      });
+    };
+
+    const scheduleEditorReapply = () => {
+      if (editorResizeFrameRef.current !== null) {
+        cancelAnimationFrame(editorResizeFrameRef.current);
+      }
+
+      editorResizeFrameRef.current = requestAnimationFrame(() => {
+        editorResizeFrameRef.current = null;
+        applyEditorProgress(sharedProgressRef.current);
+        postScrollSyncSet(sharedProgressRef.current);
+      });
+    };
+
+    const resizeObserver = new ResizeObserver(scheduleEditorReapply);
+    const editorContent = editorViewport.firstElementChild;
+
+    resizeObserver.observe(editorViewport);
+
+    if (editorContent instanceof HTMLElement) {
+      resizeObserver.observe(editorContent);
     }
 
-    window.addEventListener(RESUME_STUDIO_PREVIEW_EVENT, handlePreviewEvent);
+    editorViewport.addEventListener('scroll', syncEditorProgress, { passive: true });
 
     return () => {
-      window.removeEventListener(RESUME_STUDIO_PREVIEW_EVENT, handlePreviewEvent);
+      if (editorScrollFrameRef.current !== null) {
+        cancelAnimationFrame(editorScrollFrameRef.current);
+      }
+
+      if (editorResizeFrameRef.current !== null) {
+        cancelAnimationFrame(editorResizeFrameRef.current);
+      }
+
+      if (clearEditorSuppressionFrameRef.current !== null) {
+        cancelAnimationFrame(clearEditorSuppressionFrameRef.current);
+      }
+
+      resizeObserver.disconnect();
+      editorViewport.removeEventListener('scroll', syncEditorProgress);
     };
-  }, [isFrameLoaded]);
+  }, [applyEditorProgress, editorViewportRef, isFrameLoaded, postScrollSyncSet]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (
+        event.origin !== window.location.origin ||
+        event.source !== frameRef.current?.contentWindow
+      ) {
+        return;
+      }
+
+      if (isResumeStudioScrollSyncReadyMessage(event.data)) {
+        isPreviewReadyRef.current = true;
+        postScrollSyncSet(sharedProgressRef.current);
+        return;
+      }
+
+      if (!isResumeStudioScrollSyncUpdateMessage(event.data)) {
+        return;
+      }
+
+      if (!hasMeaningfulProgressDelta(sharedProgressRef.current, event.data.progress)) {
+        return;
+      }
+
+      sharedProgressRef.current = event.data.progress;
+      applyEditorProgress(event.data.progress);
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
+  }, [applyEditorProgress, editorViewportRef, postScrollSyncSet]);
 
   return (
-    <aside className="rounded-[28px] border border-(--color-border-subtle) bg-(--color-surface-panel) p-4 shadow-[0_28px_60px_-44px_rgba(11,37,31,0.45)]">
-      <div className="mb-3">
-        <p className="m-0 text-sm font-medium text-(--color-text-strong)">Live preview</p>
-        <p className="mt-1 text-xs leading-5 text-(--color-text-muted)">
-          Changes render instantly here and autosave after a short pause.
-        </p>
-      </div>
-
+    <div
+      ref={containerRef}
+      data-testid="resume-studio-preview-pane"
+      className="resume-studio-preview-pane h-full overflow-hidden"
+    >
       <div
-        ref={containerRef}
         data-testid="resume-studio-preview-viewport"
-        className="relative h-135 overflow-hidden rounded-3xl border border-(--color-border-subtle) bg-[linear-gradient(180deg,#dfe9e3,#f1f5f0)]"
+        className="h-full w-full overflow-hidden"
       >
         <div
-          className="absolute inset-3 flex items-center justify-center"
+          data-testid="resume-studio-preview-shell"
+          className="h-full w-full"
         >
           <div
-            data-testid="resume-studio-preview-shell"
-            className="relative shrink-0 overflow-hidden rounded-[14px] shadow-[0_24px_48px_-36px_rgba(11,37,31,0.55)]"
-            style={{
-              height: RESUME_STUDIO_PREVIEW_FRAME_HEIGHT * scale,
-              width: RESUME_STUDIO_PREVIEW_FRAME_WIDTH * scale,
-            }}
+            data-testid="resume-studio-preview-stage"
+            className="resume-studio-preview-stage h-full w-full overflow-hidden bg-white"
           >
             <iframe
               ref={frameRef}
               data-testid="resume-studio-preview-frame"
               title="Resume Studio preview"
               src={frameUrl}
-              onLoad={() => setIsFrameLoaded(true)}
-              className="pointer-events-none border-0 bg-[#e9efea]"
+              onLoad={() => {
+                isFrameLoadedRef.current = true;
+                isPreviewReadyRef.current = false;
+                setIsFrameLoaded(true);
+              }}
+              className="block border-0 bg-white"
               style={{
-                height: RESUME_STUDIO_PREVIEW_FRAME_HEIGHT,
+                height: iframeViewportHeight,
                 transform: `scale(${scale})`,
                 transformOrigin: 'top left',
                 width: RESUME_STUDIO_PREVIEW_FRAME_WIDTH,
@@ -151,6 +297,6 @@ export function ResumeStudioPreviewFrame({
           </div>
         </div>
       </div>
-    </aside>
+    </div>
   );
 }

@@ -76,9 +76,10 @@ export function formatDuration(startDate: string, endDate?: string | null) {
   return parts.join(', ');
 }
 
+export function formatDateRange(startDate: string, endDate?: string | null) {
+  return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+}
+
 export function formatDateRangeWithDuration(startDate: string, endDate?: string | null) {
-  return `${formatDate(startDate)} - ${formatDate(endDate)} [${formatDuration(
-    startDate,
-    endDate
-  )}]`;
+  return `${formatDateRange(startDate, endDate)} [${formatDuration(startDate, endDate)}]`;
 }

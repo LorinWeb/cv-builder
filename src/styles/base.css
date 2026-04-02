@@ -6,6 +6,7 @@
   --color-ambient-primary: var(--color-primary);
   --color-section-title: var(--color-secondary);
   --color-section-subtitle: var(--color-secondary);
+  --color-experience-headline: #07a135;
   --color-company-role: var(--color-primary);
   --color-company-name: var(--color-secondary);
   --color-text-strong: var(--color-primary);
@@ -90,6 +91,10 @@ h1 {
   margin: 0.40em 0;
 }
 
+h5 {
+  margin: 0;
+}
+
 a {
   background-color: transparent;
   -webkit-text-decoration-skip: objects;
@@ -108,6 +113,10 @@ textarea {
   font-size: 100%;
   line-height: 1.15;
   margin: 0;
+}
+
+#root[data-resume-studio-open='true'] {
+  overflow: hidden;
 }
 
 .resume-studio-editor-shell .resume-studio-editor-toolbar {

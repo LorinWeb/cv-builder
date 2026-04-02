@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import {
   formatDate,
+  formatDateRange,
   formatDateRangeWithDuration,
   formatDuration,
 } from '../src/helpers/date-range';
@@ -23,4 +24,9 @@ test('keeps loose ISO-like dates working', async () => {
   expect(formatDateRangeWithDuration('2010-06-1', '2018-08-24')).toBe(
     'Jun 2010 - Aug 2018 [8 years, 3 months]'
   );
+});
+
+test('renders date ranges without computed durations when requested', async () => {
+  expect(formatDateRange('2023-02-24', '2025-09-26')).toBe('Feb 2023 - Sep 2025');
+  expect(formatDateRange('2025-10-01', '')).toBe('Oct 2025 - Present');
 });

@@ -3,11 +3,17 @@ export interface PrintConfig {
   printBreakBefore?: 'page';
 }
 
+export type ResumeMode = 'structured' | 'manual';
+
 export interface TextEntry extends PrintConfig {
   text: string;
 }
 
 export type TextValue = string | TextEntry;
+
+export interface ResumeManualContent {
+  markdown: string;
+}
 
 export interface ResumeLocation {
   address?: string;
@@ -133,10 +139,14 @@ interface ResumeSections {
 
 export interface ResumeData extends ResumeSections {
   basics: ResumeBasics;
+  manual?: ResumeManualContent;
+  mode?: ResumeMode;
 }
 
 export interface ResumeSourceData extends ResumeSections {
   basics: ResumeSourceBasics;
+  manual?: ResumeManualContent;
+  mode?: ResumeMode;
 }
 
 export type ResumeRuntimeData = ResumeData | ResumeSourceData;

@@ -4,13 +4,14 @@ import {
   RESUME_STUDIO_API_ROOT,
   RESUME_STUDIO_PREVIEW_MESSAGE_TYPE,
   RESUME_STUDIO_PREVIEW_QUERY_PARAM,
+  RESUME_STUDIO_SCROLL_SYNC_READY_MESSAGE_TYPE,
+  RESUME_STUDIO_SCROLL_SYNC_SET_MESSAGE_TYPE,
+  RESUME_STUDIO_SCROLL_SYNC_UPDATE_MESSAGE_TYPE,
 } from './constants';
 import type {
   ResumeStudioApiErrorPayload,
   ResumeStudioCreateVersionPayload,
   ResumeStudioDraftPayload,
-  ResumeStudioPhotoUploadPayload,
-  ResumeStudioPhotoUploadResult,
   ResumeStudioState,
 } from './types';
 
@@ -19,6 +20,24 @@ export const RESUME_STUDIO_PREVIEW_EVENT = 'resume-studio:preview-data';
 interface ResumeStudioPreviewMessage {
   data: ReturnType<typeof redactResumeData>;
   type: typeof RESUME_STUDIO_PREVIEW_MESSAGE_TYPE;
+}
+
+interface ResumeStudioScrollSyncReadyMessage {
+  type: typeof RESUME_STUDIO_SCROLL_SYNC_READY_MESSAGE_TYPE;
+}
+
+interface ResumeStudioScrollSyncProgressMessage {
+  progress: number;
+}
+
+interface ResumeStudioScrollSyncSetMessage
+  extends ResumeStudioScrollSyncProgressMessage {
+  type: typeof RESUME_STUDIO_SCROLL_SYNC_SET_MESSAGE_TYPE;
+}
+
+interface ResumeStudioScrollSyncUpdateMessage
+  extends ResumeStudioScrollSyncProgressMessage {
+  type: typeof RESUME_STUDIO_SCROLL_SYNC_UPDATE_MESSAGE_TYPE;
 }
 
 export class ResumeStudioApiError extends Error {
@@ -91,6 +110,32 @@ function toResumeStudioPreviewData(data: ResumeSourceData) {
   return redactResumeData(data);
 }
 
+function clampScrollProgress(progress: number) {
+  if (!Number.isFinite(progress)) {
+    return 0;
+  }
+
+  return Math.min(1, Math.max(0, progress));
+}
+
+function isScrollSyncProgressMessage(
+  value: unknown,
+  expectedType:
+    | typeof RESUME_STUDIO_SCROLL_SYNC_SET_MESSAGE_TYPE
+    | typeof RESUME_STUDIO_SCROLL_SYNC_UPDATE_MESSAGE_TYPE
+): value is ResumeStudioScrollSyncProgressMessage & { type: typeof expectedType } {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  return (
+    'progress' in value &&
+    typeof (value as { progress?: unknown }).progress === 'number' &&
+    'type' in value &&
+    (value as { type?: string }).type === expectedType
+  );
+}
+
 export function createResumeStudioPreviewMessage(
   data: ResumeSourceData
 ): ResumeStudioPreviewMessage {
@@ -112,6 +157,95 @@ export function isResumeStudioPreviewMessage(
     (value as { type?: string }).type === RESUME_STUDIO_PREVIEW_MESSAGE_TYPE &&
     'data' in value
   );
+}
+
+export function createResumeStudioScrollSyncReadyMessage(): ResumeStudioScrollSyncReadyMessage {
+  return {
+    type: RESUME_STUDIO_SCROLL_SYNC_READY_MESSAGE_TYPE,
+  };
+}
+
+export function createResumeStudioScrollSyncSetMessage(
+  progress: number
+): ResumeStudioScrollSyncSetMessage {
+  return {
+    progress: clampScrollProgress(progress),
+    type: RESUME_STUDIO_SCROLL_SYNC_SET_MESSAGE_TYPE,
+  };
+}
+
+export function createResumeStudioScrollSyncUpdateMessage(
+  progress: number
+): ResumeStudioScrollSyncUpdateMessage {
+  return {
+    progress: clampScrollProgress(progress),
+    type: RESUME_STUDIO_SCROLL_SYNC_UPDATE_MESSAGE_TYPE,
+  };
+}
+
+export function isResumeStudioScrollSyncReadyMessage(
+  value: unknown
+): value is ResumeStudioScrollSyncReadyMessage {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  return (
+    'type' in value &&
+    (value as { type?: string }).type === RESUME_STUDIO_SCROLL_SYNC_READY_MESSAGE_TYPE
+  );
+}
+
+export function isResumeStudioScrollSyncSetMessage(
+  value: unknown
+): value is ResumeStudioScrollSyncSetMessage {
+  return isScrollSyncProgressMessage(value, RESUME_STUDIO_SCROLL_SYNC_SET_MESSAGE_TYPE);
+}
+
+export function isResumeStudioScrollSyncUpdateMessage(
+  value: unknown
+): value is ResumeStudioScrollSyncUpdateMessage {
+  return isScrollSyncProgressMessage(value, RESUME_STUDIO_SCROLL_SYNC_UPDATE_MESSAGE_TYPE);
+}
+
+export function getResumeStudioMaxScrollTop(element: Pick<HTMLElement, 'clientHeight' | 'scrollHeight'>) {
+  return Math.max(0, element.scrollHeight - element.clientHeight);
+}
+
+export function getResumeStudioScrollProgress(
+  element: Pick<HTMLElement, 'clientHeight' | 'scrollHeight' | 'scrollTop'>
+) {
+  const maxScrollTop = getResumeStudioMaxScrollTop(element);
+
+  if (maxScrollTop === 0) {
+    return 0;
+  }
+
+  return clampScrollProgress(element.scrollTop / maxScrollTop);
+}
+
+export function getResumeStudioScrollTopForProgress(
+  element: Pick<HTMLElement, 'clientHeight' | 'scrollHeight'>,
+  progress: number
+) {
+  const maxScrollTop = getResumeStudioMaxScrollTop(element);
+
+  if (maxScrollTop === 0) {
+    return 0;
+  }
+
+  return clampScrollProgress(progress) * maxScrollTop;
+}
+
+export function setResumeStudioScrollProgress(
+  element: HTMLElement,
+  progress: number
+) {
+  const nextScrollTop = getResumeStudioScrollTopForProgress(element, progress);
+
+  element.scrollTop = nextScrollTop;
+
+  return nextScrollTop;
 }
 
 export function publishResumeStudioPreview(data: ResumeSourceData) {
@@ -162,14 +296,4 @@ export function selectResumeStudioVersion(versionId: number) {
   return requestJson<ResumeStudioState>(`/versions/${versionId}/select`, {
     method: 'POST',
   });
-}
-
-export function uploadResumeStudioPhoto(
-  payload: ResumeStudioPhotoUploadPayload
-) {
-  return requestJsonWithPayload<ResumeStudioPhotoUploadResult>(
-    '/upload-photo',
-    'POST',
-    payload
-  );
 }

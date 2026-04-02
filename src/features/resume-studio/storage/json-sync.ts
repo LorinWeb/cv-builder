@@ -3,19 +3,17 @@ import path from 'node:path';
 
 import { resumeDataSchema } from '../../../data/resume-schema';
 import type { ResumeSourceData } from '../../../data/types/resume';
-import { RESUME_STUDIO_DB_PATH, RESUME_STUDIO_PRIVATE_DATA_PATH, RESUME_STUDIO_PUBLIC_UPLOADS_DIR } from '../constants';
+import { RESUME_STUDIO_DB_PATH, RESUME_STUDIO_PRIVATE_DATA_PATH } from '../constants';
 
 interface ResumeStudioPaths {
   databasePath: string;
   privateDataPath: string;
-  publicUploadsDir: string;
 }
 
 export function resolveResumeStudioPaths(projectRoot: string): ResumeStudioPaths {
   return {
     databasePath: path.resolve(projectRoot, RESUME_STUDIO_DB_PATH),
     privateDataPath: path.resolve(projectRoot, RESUME_STUDIO_PRIVATE_DATA_PATH),
-    publicUploadsDir: path.resolve(projectRoot, RESUME_STUDIO_PUBLIC_UPLOADS_DIR),
   };
 }
 
